@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent" android:orientation="vertical"
+  android:background="@drawable/bg"
+  >
+  
+<LinearLayout
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent" android:orientation="vertical"
+	android:gravity="center_horizontal"
+  >
+
+    <ImageView  
+		android:layout_marginTop="24dp" 
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content" 
+        android:scaleType="center"
+        android:src="@drawable/droidvnclogo" />
+
+<Button android:textSize="30sp" android:id="@+id/Button01" android:layout_height="wrap_content" android:text="Start Server"
+		android:layout_width="wrap_content"
+		android:layout_marginTop="24dp"
+		android:background="@drawable/btnstart"
+		android:textColor="#fff"
+		android:shadowDy="1.0"
+		android:shadowRadius="0.5"
+		android:shadowColor="#111"
+		>
+</Button>
+<Button android:textSize="30sp" android:id="@+id/Button02" android:layout_height="wrap_content" android:text="Stop Server"
+		android:layout_width="wrap_content"
+		android:layout_marginTop="10dp"
+		android:background="@drawable/btnstop"
+		android:textColor="#fff"
+		android:shadowDy="1.0"
+		android:shadowRadius="0.5"
+		android:shadowColor="#111"
+		>
+</Button>
+
+
+<TextView android:textSize="30sp" android:text="@+id/TextView01" android:id="@+id/stateLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingTop="10dp"
+		android:shadowDy="1.0"
+		android:shadowRadius="0.5"
+		android:shadowColor="#111">
+</TextView>
+<TextView android:textSize="18sp" android:text="@+id/TextView02" android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/TextView01" android:paddingTop="10dp"
+		android:shadowDy="1.0"
+		android:shadowRadius="0.5"
+		android:shadowColor="#111">
+</TextView>
+
+</LinearLayout>
+<!-- 
+<TextView 
+android:textSize="15sp" 
+android:text="Click on ad to support project"
+android:id="@+id/stateLabel" 
+android:layout_width="fill_parent" 
+android:layout_height="wrap_content" 
+android:paddingTop="20px"
+android:layout_alignParentBottom="true"
+android:layout_gravity="bottom"
+></TextView>
+
+<com.mobclix.android.sdk.MobclixMMABannerXLAdView
+android:id="@+id/banner_adview"
+android:layout_height="50dip"
+android:layout_width="320dip"
+android:layout_gravity="bottom"
+android:layout_alignParentBottom="true"
+/> -->
+</RelativeLayout>    

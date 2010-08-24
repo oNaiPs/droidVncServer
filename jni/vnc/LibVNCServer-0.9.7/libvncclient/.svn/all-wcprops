@@ -1,0 +1,107 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient
+END
+listen.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/listen.c
+END
+zlib.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/zlib.c
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/Makefile.in
+END
+hextile.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/hextile.c
+END
+vncviewer.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/vncviewer.c
+END
+corre.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/corre.c
+END
+sockets.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/sockets.c
+END
+zrle.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/zrle.c
+END
+cursor.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/cursor.c
+END
+lzoconf.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/lzoconf.h
+END
+tight.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/tight.c
+END
+minilzo.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/minilzo.c
+END
+minilzo.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/minilzo.h
+END
+ultra.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/ultra.c
+END
+rre.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/rre.c
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/Makefile.am
+END
+rfbproto.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncclient/rfbproto.c
+END

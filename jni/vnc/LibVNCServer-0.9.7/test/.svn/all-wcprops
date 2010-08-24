@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test
+END
+cargstest.c
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test/cargstest.c
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test/Makefile.in
+END
+copyrecttest.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test/copyrecttest.c
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test/Makefile.am
+END
+encodingstest.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test/encodingstest.c
+END
+blooptest.c
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test/blooptest.c
+END
+cursortest.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/test/cursortest.c
+END

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">droid VNC server</string>
+<string name="password"></string>
+<string-array name="rotation_values"><item>0</item>
+<item>90</item>
+<item>180</item>
+<item>270</item>
+</string-array>
+ <string name="device_info_fmt">
+droid VNC version: <xliff:g id="application_version">%s</xliff:g>\n
+Device model: <xliff:g id="device_model">%s</xliff:g>\n
+Firmware version: <xliff:g id="firmware_revision">%s</xliff:g>\n
+Kernel version: <xliff:g id="kernel_version">%s</xliff:g>\n
+Build number: <xliff:g id="build_number">%s</xliff:g>\n
+    </string>    
+</resources>

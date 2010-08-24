@@ -1,0 +1,269 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver
+END
+tableinittctemplate.c
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/tableinittctemplate.c
+END
+stats.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/stats.c
+END
+zrlepalettehelper.h
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zrlepalettehelper.h
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/Makefile.in
+END
+tabletrans24template.c
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/tabletrans24template.c
+END
+font.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/font.c
+END
+corre.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/corre.c
+END
+sockets.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/sockets.c
+END
+zrle.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zrle.c
+END
+rfbregion.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/rfbregion.c
+END
+tight.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/tight.c
+END
+private.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/private.h
+END
+tableinit24.c
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/tableinit24.c
+END
+minilzo.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/minilzo.c
+END
+minilzo.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/minilzo.h
+END
+tableinitcmtemplate.c
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/tableinitcmtemplate.c
+END
+zywrletemplate.c
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zywrletemplate.c
+END
+rre.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/rre.c
+END
+tabletranstemplate.c
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/tabletranstemplate.c
+END
+selbox.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/selbox.c
+END
+translate.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/translate.c
+END
+draw.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/draw.c
+END
+cargs.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/cargs.c
+END
+zlib.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zlib.c
+END
+rfbserver.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/rfbserver.c
+END
+auth.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/auth.c
+END
+hextile.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/hextile.c
+END
+d3des.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/d3des.c
+END
+zrletypes.h
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zrletypes.h
+END
+d3des.h
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/d3des.h
+END
+vncauth.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/vncauth.c
+END
+cursor.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/cursor.c
+END
+lzoconf.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/lzoconf.h
+END
+zrleoutstream.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zrleoutstream.c
+END
+httpd.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/httpd.c
+END
+main.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/main.c
+END
+zrleoutstream.h
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zrleoutstream.h
+END
+zrleencodetemplate.c
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zrleencodetemplate.c
+END
+ultra.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/ultra.c
+END
+scale.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/scale.c
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/Makefile.am
+END
+cutpaste.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/cutpaste.c
+END
+zrlepalettehelper.c
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/zrlepalettehelper.c
+END
+scale.h
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver/scale.h
+END

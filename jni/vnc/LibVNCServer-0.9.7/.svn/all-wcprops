@@ -1,0 +1,143 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7
+END
+configure
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/configure
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/Makefile.in
+END
+AUTHORS
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/AUTHORS
+END
+ChangeLog
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/ChangeLog
+END
+depcomp
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/depcomp
+END
+compile
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/compile
+END
+rfbconfig.h.in
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/rfbconfig.h.in
+END
+config.guess
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/config.guess
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/README
+END
+ltmain.sh
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/ltmain.sh
+END
+config.sub
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/config.sub
+END
+LibVNCServer.spec.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/LibVNCServer.spec.in
+END
+configure.ac
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/configure.ac
+END
+TODO
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/TODO
+END
+INSTALL
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/INSTALL
+END
+acinclude.m4
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/acinclude.m4
+END
+COPYING
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/COPYING
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/Makefile.am
+END
+missing
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/missing
+END
+NEWS
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/NEWS
+END
+libvncserver-config.in
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/libvncserver-config.in
+END
+aclocal.m4
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/aclocal.m4
+END
+install-sh
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/install-sh
+END
