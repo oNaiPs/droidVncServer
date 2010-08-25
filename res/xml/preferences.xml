@@ -3,6 +3,7 @@
   xmlns:android="http://schemas.android.com/apk/res/android">
 <EditTextPreference android:key="password" android:title="VNC password"></EditTextPreference>
 <ListPreference android:key="rotation" android:title="Rotation" android:entries="@array/rotation_values" android:entryValues="@array/rotation_values"></ListPreference>
+<ListPreference android:key="scale" android:title="Scale Screen" android:entries="@array/scale_strings" android:entryValues="@array/scale_values"></ListPreference>
 
 
 

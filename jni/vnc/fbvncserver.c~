@@ -198,7 +198,7 @@ static rfbNewClientHookPtr clientHook(rfbClientPtr cl)
   if (scaling!=0 && scaling!=100)
   {
     rfbScalingSetup(cl, vncscr->width*scaling/100.0, vncscr->height*scaling/100.0);
-    
+    rfbSendNewScaleSize(cl);
   }
 
   return RFB_CLIENT_ACCEPT;

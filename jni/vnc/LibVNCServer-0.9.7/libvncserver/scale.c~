@@ -351,12 +351,12 @@ void rfbScalingSetup(rfbClientPtr cl, int width, int height)
         /* Update it! */
         if (ptr->scaledScreenRefCount<1)
             rfbScaledScreenUpdateRect(cl->screen, ptr, 0, 0, cl->screen->width, cl->screen->height);
-        
-          rfbLog("Taking one from %dx%d-%d and adding it to %dx%d-%d\n",
-             cl->scaledScreen->width, cl->scaledScreen->height,
-             cl->scaledScreen->scaledScreenRefCount,
-             ptr->width, ptr->height, ptr->scaledScreenRefCount);
-         
+        /*
+         * rfbLog("Taking one from %dx%d-%d and adding it to %dx%d-%d\n",
+         *    cl->scaledScreen->width, cl->scaledScreen->height,
+         *    cl->scaledScreen->scaledScreenRefCount,
+         *    ptr->width, ptr->height, ptr->scaledScreenRefCount);
+         */
 
         LOCK(cl->updateMutex);
         cl->scaledScreen->scaledScreenRefCount--;

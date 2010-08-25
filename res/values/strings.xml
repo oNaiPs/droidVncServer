@@ -7,6 +7,21 @@
 <item>180</item>
 <item>270</item>
 </string-array>
+<string-array name="scale_values">
+<item>150</item>
+<item>100</item>
+<item>50</item>
+<item>30</item>
+<item>20</item>
+</string-array>
+<string-array name="scale_strings">
+<item>150 %</item>
+<item>100 %</item>
+<item>50 %</item>
+<item>30 %</item>
+<item>20 %</item>
+</string-array>
+
  <string name="device_info_fmt">
 droid VNC version: <xliff:g id="application_version">%s</xliff:g>\n
 Device model: <xliff:g id="device_model">%s</xliff:g>\n

@@ -53,10 +53,10 @@
 </TextView>
 
 </LinearLayout>
-<!-- 
+ 
 <TextView 
 android:textSize="15sp" 
-android:text="Click on ad to support project"
+android:text="Click on ad to support project" 
 android:id="@+id/stateLabel" 
 android:layout_width="fill_parent" 
 android:layout_height="wrap_content" 
@@ -71,5 +71,5 @@ android:layout_height="50dip"
 android:layout_width="320dip"
 android:layout_gravity="bottom"
 android:layout_alignParentBottom="true"
-/> -->
+/> 
 </RelativeLayout>    

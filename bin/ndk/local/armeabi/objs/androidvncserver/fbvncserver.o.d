@@ -90,6 +90,7 @@
  /home/onaips/Desktop/android_dev/android-ndk-r4/build/platforms/android-5/arch-arm/usr/include/asm/signal.h \
  /home/onaips/Desktop/android_dev/android-ndk-r4/build/platforms/android-5/arch-arm/usr/include/asm-generic/signal.h \
  /home/onaips/Desktop/android_dev/android-ndk-r4/build/platforms/android-5/arch-arm/usr/include/sched.h \
+ /home/onaips/Dropbox/projectos/workspace/avnc/jni/vnc/LibVNCServer-0.9.7/libvncserver/scale.h \
  /home/onaips/Dropbox/projectos/workspace/avnc/jni/vnc/LibVNCServer-0.9.7/rfb/keysym.h \
  /home/onaips/Dropbox/projectos/workspace/avnc/jni/vnc/suinput.h \
  /home/onaips/Desktop/android_dev/android-ndk-r4/build/platforms/android-5/arch-arm/usr/include/linux/uinput.h \
@@ -274,6 +275,8 @@
 /home/onaips/Desktop/android_dev/android-ndk-r4/build/platforms/android-5/arch-arm/usr/include/asm-generic/signal.h:
 
 /home/onaips/Desktop/android_dev/android-ndk-r4/build/platforms/android-5/arch-arm/usr/include/sched.h:
+
+/home/onaips/Dropbox/projectos/workspace/avnc/jni/vnc/LibVNCServer-0.9.7/libvncserver/scale.h:
 
 /home/onaips/Dropbox/projectos/workspace/avnc/jni/vnc/LibVNCServer-0.9.7/rfb/keysym.h:
 

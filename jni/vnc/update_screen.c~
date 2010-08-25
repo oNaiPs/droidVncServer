@@ -162,7 +162,7 @@ memcpy(vncbuf,a,vncscr->width*vncscr->height*scrinfo.bits_per_pixel/CHAR_BIT);
     else
       rfbProcessEvents(vncscr, 100000);
    
-//       __android_log_print(ANDROID_LOG_INFO,"VNC","standby %d xoff=%d yoff=%d\n",standby,scrinfo.xoffset,scrinfo.yoffset);
+      __android_log_print(ANDROID_LOG_INFO,"VNC","standby %d xoff=%d yoff=%d\n",standby,scrinfo.xoffset,scrinfo.yoffset);
     change=0;
   }
   else
@@ -170,6 +170,6 @@ memcpy(vncbuf,a,vncscr->width*vncscr->height*scrinfo.bits_per_pixel/CHAR_BIT);
     change=change+1;
     standby=0;
     rfbProcessEvents(vncscr, 100000);
-//        __android_log_print(ANDROID_LOG_INFO,"VNC","change %d\tmin_x=%d max_x=%d min_y=%d max_y=%d xoff=%d yoff=%d\n",change,min_x,max_x,min_y,max_y,scrinfo.xoffset,scrinfo.yoffset);
+       __android_log_print(ANDROID_LOG_INFO,"VNC","change %d\tmin_x=%d max_x=%d min_y=%d max_y=%d xoff=%d yoff=%d\n",change,min_x,max_x,min_y,max_y,scrinfo.xoffset,scrinfo.yoffset);
   } 
 }
