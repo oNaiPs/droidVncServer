@@ -1,12 +1,9 @@
 #define OUT_T CONCAT3E(uint,OUT,_t)
 #define FUNCTION CONCAT2E(update_screen_,OUT)
 
-
-
-
 void FUNCTION(void)
 {  
-  static int i,j;
+  static int i,j,offset;
   
  update_fb_info();
   
@@ -17,9 +14,9 @@ void FUNCTION(void)
 //     offset=scrinfo.xres*scrinfo.yoffset;
 //   else
 //     offset=0;
-//  offset = scrinfo.xres * scrinfo.yoffset +  scrinfo.xoffset * scrinfo.bits_per_pixel / CHAR_BIT;
 
- 
+ offset = scrinfo.xres * scrinfo.yoffset +  scrinfo.xoffset * scrinfo.bits_per_pixel / CHAR_BIT;
+		       
   OUT_T* a = (OUT_T*)cmpbuf;
   OUT_T* b = (OUT_T*)fbmmap;
   
@@ -33,9 +30,9 @@ void FUNCTION(void)
 	{
 	  for (i = 0; i < scrinfo.xres; i++)
 	    {
-		if (a[i + j * scrinfo.xres]!=b[PIXEL_TO_VIRTUALPIXEL(i,j)])
+		if (a[i + j * scrinfo.xres]!=b[i + j * scrinfo.xres + offset ])
 		{
-		  a[i + j * scrinfo.xres]=b[PIXEL_TO_VIRTUALPIXEL(i,j)];
+		  a[i + j * scrinfo.xres]=b[i + j * scrinfo.xres + offset];
 
 		  if (i>max_x)
 		    max_x=i;
@@ -59,9 +56,9 @@ void FUNCTION(void)
 	{
 	  for (i = 0; i < scrinfo.xres; i++)
 		{
-		  if (a[(scrinfo.yres - 1 - j + i * scrinfo.yres)] != b[PIXEL_TO_VIRTUALPIXEL(i,j)])
+		  if (a[(scrinfo.yres - 1 - j + i * scrinfo.yres)] != b[i + j * scrinfo.xres + offset])
 		   {
-		  a[(scrinfo.yres - 1 - j + i * scrinfo.yres)] = b[PIXEL_TO_VIRTUALPIXEL(i,j)];
+		  a[(scrinfo.yres - 1 - j + i * scrinfo.yres)] = b[i + j * scrinfo.xres + offset ];
 		  
 		  if (i>max_y)
 		    max_y=i;
@@ -87,22 +84,19 @@ void FUNCTION(void)
 	{
 		for (i = 0; i < scrinfo.xres; i++)
 		{
-		  if (a[((scrinfo.xres - 1 - i) + (scrinfo.yres - 1 - j) * scrinfo.xres)]!=b[PIXEL_TO_VIRTUALPIXEL(i,j)])
+		  if (a[i + j * scrinfo.xres]!=b[scrinfo.yres*scrinfo.xres - (i + j * scrinfo.xres ) + offset ])
 		  {
-		  a[((scrinfo.xres - 1 - i) + (scrinfo.yres - 1 - j) * scrinfo.xres)]=b[PIXEL_TO_VIRTUALPIXEL(i,j)];
-		    
+		    a[i + j * scrinfo.xres]=b[scrinfo.yres*scrinfo.xres - (i + j * scrinfo.xres) + offset ];
 		    
 		  if (i>max_x)
 		    max_x=i;
 		  if (i<min_x)
 		    min_x=i;
 		  
-		  int h=scrinfo.yres-j;
-		  
-		  if (h < min_y)
-		    min_y=scrinfo.yres-j;
- 		  if (h > max_y)
-		    max_y=scrinfo.yres-j;
+		  if (j>max_y)
+		    max_y=j;
+		  if (j<min_y)
+		    min_y=j;
 		  
 		if (idle)
 		    idle=0;
@@ -117,19 +111,20 @@ void FUNCTION(void)
 	  
 		for (i = 0; i < scrinfo.xres; i++)
 		{
-		    if(a[j + (scrinfo.xres - 1 - i) * scrinfo.yres] != b[PIXEL_TO_VIRTUALPIXEL(i,j)])
+		    if(a[(scrinfo.yres - 1 - j + i * scrinfo.yres)] != b[ scrinfo.yres * scrinfo.xres - (i + j * scrinfo.xres) + offset ])
 		    {
-		      a[j + (scrinfo.xres - 1 - i) * scrinfo.yres] = b[PIXEL_TO_VIRTUALPIXEL(i,j)];
-		       
+		      a[(scrinfo.yres - 1 - j + i * scrinfo.yres)] = b[ scrinfo.yres * scrinfo.xres - (i + j * scrinfo.xres) + offset ];
 	          if (i>max_y)
 		    max_y=i;
 		  if (i<min_y)
 		    min_y=i;
 		  
-		  if (j < min_x)
-		    min_x=j;
- 		  if (j > max_x)
-		    max_x=j;
+		  int h=scrinfo.yres-j;
+		  
+		  if (h < min_x)
+		    min_x=scrinfo.yres-j;
+ 		  if (h > max_x)
+		    max_x=scrinfo.yres-j;
 		  
 		  if (idle)
 		    idle=0;
@@ -141,25 +136,40 @@ void FUNCTION(void)
   
 memcpy(vncbuf,a,vncscr->width*vncscr->height*scrinfo.bits_per_pixel/CHAR_BIT);
 
+  
+
   if (min_x!=9999 && min_y!=9999 && max_x!=-1 && max_y!=-1)
   {
+//      min_x--;
      max_x++;
+//      min_y--;
      max_y++;
      
   rfbMarkRectAsModified(vncscr, min_x, min_y, max_x, max_y);
-  
+  rfbProcessEvents(vncscr, 10000);
   } 
-
+  
+//     rfbMarkRectAsModified(vncscr, 0, 0, scrinfo.yres,scrinfo.xres);
+//       rfbProcessEvents(vncscr, 10000);
+ 
+ 
   if (idle)
   {
     standby=standby+1;
-//__android_log_print(ANDROID_LOG_INFO,"VNC","standby %d xoff=%d yoff=%d offset=%d\n",standby,scrinfo.xoffset,scrinfo.yoffset,PIXEL_TO_VIRTUALPIXEL(i,j));
+    
+    if (standby>30)
+      rfbProcessEvents(vncscr, 1000000);
+    else
+      rfbProcessEvents(vncscr, 100000);
+   
+//       __android_log_print(ANDROID_LOG_INFO,"VNC","standby %d xoff=%d yoff=%d\n",standby,scrinfo.xoffset,scrinfo.yoffset);
     change=0;
   }
   else
   {
     change=change+1;
     standby=0;
-//        __android_log_print(ANDROID_LOG_INFO,"VNC","change %d\tmin_x=%d max_x=%d min_y=%d max_y=%d xoff=%d yoff=%d offset=%d\n",change,min_x,max_x,min_y,max_y,scrinfo.xoffset,scrinfo.yoffset,PIXEL_TO_VIRTUALPIXEL(i,j));
+    rfbProcessEvents(vncscr, 100000);
+//        __android_log_print(ANDROID_LOG_INFO,"VNC","change %d\tmin_x=%d max_x=%d min_y=%d max_y=%d xoff=%d yoff=%d\n",change,min_x,max_x,min_y,max_y,scrinfo.xoffset,scrinfo.yoffset);
   } 
 }

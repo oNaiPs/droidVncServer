@@ -1,18 +1,32 @@
 #define OUT_T CONCAT3E(uint,OUT,_t)
 #define FUNCTION CONCAT2E(FUNCNAME,OUT)
 
-static void rfbRotate(rfbScreenInfoPtr vncbuf,rfbScreenInfoPtr fbmmap)
+static void FUNCTION(rfbScreenInfoPtr screen)
 {
-	uint_32_t * buffer = (uint_32_t*)screen->frameBuffer;
+	OUT_T* buffer = (OUT_T*)screen->frameBuffer;
 	int i, j, w = screen->width, h = screen->height;
-	uint_32_t * newBuffer = (uint_32_t*)malloc(w * h * sizeof(uint_32_t));
+	OUT_T* newBuffer = (OUT_T*)malloc(w * h * sizeof(OUT_T));
 
 	for (j = 0; j < h; j++)
 		for (i = 0; i < w; i++)
-			newBuffer[(h - 1 - j + i * h)] = buffer[i + j * w];
+			newBuffer[FUNC(i, j)] = buffer[i + j * w];
 
-	memcpy(buffer, newBuffer, w * h * sizeof(uint_32_t));
+	memcpy(buffer, newBuffer, w * h * sizeof(OUT_T));
 	free(newBuffer);
+
+#ifdef SWAPDIMENSIONS
+	screen->width = h;
+	screen->paddedWidthInBytes = h * OUT / 8;
+	screen->height = w;
+
+	{
+		rfbClientIteratorPtr iterator;
+		rfbClientPtr cl;
+		iterator = rfbGetClientIterator(screen);
+		while ((cl = rfbClientIteratorNext(iterator)) != NULL)
+			cl->newFBSizePending = 1;
+	}
+#endif
 
 	rfbMarkRectAsModified(screen, 0, 0, screen->width, screen->height);
 }

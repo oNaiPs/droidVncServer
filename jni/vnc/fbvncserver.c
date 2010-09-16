@@ -52,11 +52,12 @@
 
 #define BUS_VIRTUAL 0x06
 
-
 /*****************************************************************************/
 /* Android does not use /dev/fb0. */
-#define FB_DEVICE "/dev/graphics/fb0"
-static char VNC_PASSWORD[256] = "";
+
+char VNC_PASSWORD[256] = "";
+char framebuffer_device[256] = "/dev/graphics/fb0";
+int VNC_PORT=5901;
 
 static struct fb_var_screeninfo scrinfo;
 static struct fb_fix_screeninfo fscrinfo;
@@ -68,8 +69,9 @@ static unsigned int *vncbuf;
 static unsigned int *cmpbuf;
  
 /* Android already has 5900 bound natively. */
-#define VNC_PORT 5901
+
 static rfbScreenInfoPtr vncscr;
+
 
 int idle=0,standby=0,change=0;  
 static int rotation=0,scaling=0; 
@@ -79,12 +81,12 @@ static void (*update_screen)(void)=NULL;
 static void keyevent(rfbBool down, rfbKeySym key, rfbClientPtr cl);
 static void ptrevent(int buttonMask, int x, int y, rfbClientPtr cl);
 static void rotate();
-    
+     
 /*****************************************************************************/
       
 void update_fb_info()      
 {  
-      
+       
   if (ioctl(fbfd, FBIOGET_VSCREENINFO, &scrinfo) != 0)
   {
       __android_log_print(ANDROID_LOG_INFO,"VNC","ioctl error\n");
@@ -93,25 +95,33 @@ void update_fb_info()
 } 
 
 
+#define PIXEL_TO_VIRTUALPIXEL(i,j) ((j+scrinfo.yoffset)*scrinfo.xres_virtual+i)
+// #define PIXEL_TO_VIRTUALPIXEL(i,j) ((j+scrinfo.yoffset)*scrinfo.xres_virtual+i+scrinfo.xoffset)
+
 #define OUT 32 
 #include "update_screen.c"
 #define OUT 8 
 #include "update_screen.c" 
 #define OUT 16
 #include "update_screen.c"
-
+  
+  
+inline size_t roundUpToPageSize(size_t x) {
+    return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
+}  
+  
 static void init_fb(void)
 {  
     size_t pixels;
     size_t bytespp;
        
-    if ((fbfd = open(FB_DEVICE, O_RDWR)) == -1)
+    if ((fbfd = open(framebuffer_device, O_RDWR)) == -1)
     { 
-        __android_log_print(ANDROID_LOG_INFO,"VNC","cannot open fb device %s\n", FB_DEVICE);
+        __android_log_print(ANDROID_LOG_INFO,"VNC","cannot open fb device %s\n", framebuffer_device);
 	return;  
         //  exit(EXIT_FAILURE);
     } 
-       
+         
     update_fb_info();
     
       if (ioctl(fbfd, FBIOGET_FSCREENINFO, &fscrinfo) != 0)
@@ -123,33 +133,17 @@ static void init_fb(void)
     pixels = scrinfo.xres * scrinfo.yres;
     bytespp = scrinfo.bits_per_pixel /CHAR_BIT;
     
-     __android_log_print(ANDROID_LOG_INFO,"VNC", "xres=%d, yres=%d, xresv=%d, yresv=%d, xoffs=%d, yoffs=%d, bpp=%d\n",
-                        (int)scrinfo.xres, (int)scrinfo.yres,
+     __android_log_print(ANDROID_LOG_INFO,"VNC", "line_lenght=%d xres=%d, yres=%d, xresv=%d, yresv=%d, xoffs=%d, yoffs=%d, bpp=%d\n",
+                        (int)fscrinfo.line_length,(int)scrinfo.xres, (int)scrinfo.yres,
                         (int)scrinfo.xres_virtual, (int)scrinfo.yres_virtual,
                         (int)scrinfo.xoffset, (int)scrinfo.yoffset,
                         (int)scrinfo.bits_per_pixel);
-    
-//      off_t o=0;     
-    
-     //now handled with double buffer detection
-//      if (scrinfo.xres==480 && scrinfo.yres==854 && scrinfo.xres_virtual==480 
-//     && scrinfo.yres_virtual==854 && scrinfo.xoffset==448 && scrinfo.yoffset==1710)
-/*if (scrinfo.bits_per_pixel==32)
-         //  tweak for motorola  droid
-    {
-         int off=scrinfo.xres*scrinfo.yres*scrinfo.bits_per_pixel/CHAR_BIT;
-         
-        int resto= off % sysconf(_SC_PAGE_SIZE);
-        o=   off / sysconf(_SC_PAGE_SIZE);
-        if (resto)
-            o+=1;
-         
-    }     */
-         
-//     __android_log_print(ANDROID_LOG_INFO,"VNC","buffer offset=%d * %d\n",o,(int)sysconf(_SC_PAGE_SIZE));
-//      
-//        fbmmap = mmap(NULL, (scrinfo.xres_virtual*scrinfo.yres_virtual)* bytespp , PROT_READ|PROT_READ ,  MAP_PRIVATE , fbfd, o*sysconf(_SC_PAGE_SIZE));
-    fbmmap = mmap(NULL, (scrinfo.xres_virtual*scrinfo.yres_virtual)* bytespp , PROT_READ|PROT_READ ,  MAP_PRIVATE , fbfd, 0);
+     
+     printf("AKII\n");
+     
+     size_t fbSize = roundUpToPageSize(fscrinfo.line_length * scrinfo.yres_virtual);
+
+   fbmmap = mmap(NULL, fbSize , PROT_READ|PROT_WRITE ,  MAP_SHARED , fbfd, 0);
  
           
     if (fbmmap == MAP_FAILED)
@@ -232,6 +226,7 @@ static void init_fb_server(int argc, char **argv)
     vncscr->kbdAddEvent = keyevent;
     vncscr->ptrAddEvent = ptrevent;
     vncscr->newClientHook = clientHook;
+
     
     if (strcmp(VNC_PASSWORD,"")!=0)
     {
@@ -258,7 +253,7 @@ static void init_fb_server(int argc, char **argv)
     vncscr->alwaysShared = TRUE;
     vncscr->handleEventsEagerly = TRUE;
     vncscr->deferUpdateTime = 5;
-    
+     
     rfbInitServer(vncscr);
     
     //assign update_screen depending on bpp
@@ -286,9 +281,7 @@ static void init_fb_server(int argc, char **argv)
     
     /* Mark as dirty since we haven't sent any updates at all yet. */
     
-    rfbMarkRectAsModified(vncscr, 0, 0, scrinfo.xres, scrinfo.yres);
-    rfbProcessEvents(vncscr, 100000);
-    
+    rfbMarkRectAsModified(vncscr, 0, 0, scrinfo.xres, scrinfo.yres);    
 }
 
 static int keysym2scancode(rfbBool down, rfbKeySym c, rfbClientPtr cl, int *sh, int *alt);
@@ -670,11 +663,12 @@ static void rotate()
 
 void print_usage(char **argv)
 {
-    __android_log_print(ANDROID_LOG_INFO,"VNC","androidvncserver [-p password] [-h]\n"
+    printf("androidvncserver [-p password] [-h]\n"
                         "-p password: Password to access server\n"
                         "-r rotation: Screen rotation (degrees) (0,90,180,270)\n"
 			"-s screen scale: percentage (20,30,50,100,150)\n"
-                        "-h : print this help\n");
+                        "-h : print this help\n"
+		        "-f <device> select framebuffer device\n;");
 }
 
 
@@ -702,6 +696,14 @@ int main(int argc, char **argv)
                     i++; 
                     strcpy(VNC_PASSWORD,argv[i]);
                     break;
+		case 'f': 
+                    i++; 
+                    strcpy(framebuffer_device,argv[i]);
+                    break;
+		case 'P': 
+                    i++; 
+		    VNC_PORT=atoi(argv[i]);
+                    break;
 		case 'r':
                     i++; 
 		    r=atoi(argv[i]);
@@ -711,10 +713,10 @@ int main(int argc, char **argv)
 		    break;
 		case 's':
                     i++;
-		    r=atoi(argv[i]);
+		    r=atoi(argv[i]); 
 		    if (r>=1 && r <= 150)
                         scaling=r;
-		    else
+		    else 
 		      scaling=100;
 	 	    __android_log_print(ANDROID_LOG_INFO,"VNC","scaling to %d percent\n",scaling);
 		    break;
@@ -722,9 +724,9 @@ int main(int argc, char **argv)
             }
             i++;
         }
-    } 
-    
-    __android_log_print(ANDROID_LOG_INFO,"VNC","Initializing framebuffer device " FB_DEVICE "...\n");
+    }  
+     
+    __android_log_print(ANDROID_LOG_INFO,"VNC","Initializing framebuffer device...\n");
     init_fb();
     
     __android_log_print(ANDROID_LOG_INFO,"VNC","Initializing virtual keyboard and touch device...\n");
@@ -736,17 +738,44 @@ int main(int argc, char **argv)
     __android_log_print(ANDROID_LOG_INFO,"VNC","	bpp:    %d\n", (int)scrinfo.bits_per_pixel);
     __android_log_print(ANDROID_LOG_INFO,"VNC","	port:   %d\n", (int)VNC_PORT);
     init_fb_server(argc, argv);
+    /*
+    rfbRunEventLoop(vncscr,-1,TRUE);
     
     while (1)
     { 
+    while (vncscr->clientHead == NULL)
+             sleep(1); 
+      
+    if (standby>60)
+      sleep(2);    
+    else if (standby>30)
+      sleep(1);    
+    else
+      usleep(100000);    
     
-      while (vncscr->clientHead == NULL)
+    update_screen();
+    }*/
+    
+        while (1)
+    {
+        while (vncscr->clientHead == NULL)
             rfbProcessEvents(vncscr, 100000);
-
-      update_screen();
+	
+        rfbMarkRectAsModified(vncscr, 0, 0, vncscr->width, vncscr->height);
+        
+	if (standby>60)
+	  rfbProcessEvents(vncscr, 200000);
+	else if (standby>30)
+	  rfbProcessEvents(vncscr, 100000);
+	else
+	  rfbProcessEvents(vncscr, 10000);
+        
+        
+        update_screen();
     }
+
     
     __android_log_print(ANDROID_LOG_INFO,"VNC","Cleaning up...\n");
     cleanup_fb();
     cleanup_kbd();
-}    
+}     

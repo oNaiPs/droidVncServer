@@ -1,7 +1,7 @@
 #define OUT_T CONCAT3E(uint,OUT,_t)
 #define FUNCTION CONCAT2E(FUNCNAME,OUT)
 
-static void rfbRotate(rfbScreenInfoPtr vncbuf,rfbScreenInfoPtr screen)
+static void rfbRotate(rfbScreenInfoPtr vncbuf,rfbScreenInfoPtr fbmmap)
 {
 	uint_32_t * buffer = (uint_32_t*)screen->frameBuffer;
 	int i, j, w = screen->width, h = screen->height;
