@@ -57,7 +57,7 @@
 
 char VNC_PASSWORD[256] = "";
 char framebuffer_device[256] = "/dev/graphics/fb0";
-char VNC_PORT[10]="5901";
+int VNC_PORT=5901;
 
 static struct fb_var_screeninfo scrinfo;
 static struct fb_fix_screeninfo fscrinfo;
@@ -143,7 +143,7 @@ static void init_fb(void)
      
      size_t fbSize = roundUpToPageSize(fscrinfo.line_length * scrinfo.yres_virtual);
 
-   fbmmap = mmap(NULL, fbSize , PROT_READ|PROT_WRITE ,  MAP_SHARED , fbfd, 0);
+    fbmmap = mmap(NULL, fbSize , PROT_READ|PROT_WRITE ,  MAP_SHARED , fbfd, 0);
  
           
     if (fbmmap == MAP_FAILED)
@@ -238,9 +238,9 @@ static void init_fb_server(int argc, char **argv)
     } 
     
 #ifdef DONATE_VERSION
-    vncscr->httpDir="/data/data/org.onaips.vnc_donate/";
+    vncscr->httpDir="/data/data/org.onaips.vnc_donate/files/";
 #else
-    vncscr->httpDir="/data/data/org.onaips.vnc/";
+    vncscr->httpDir="/data/data/org.onaips.vnc/files/";
 #endif
     vncscr->serverFormat.redShift=scrinfo.red.offset;
     vncscr->serverFormat.greenShift=scrinfo.green.offset; 
@@ -315,7 +315,7 @@ static void keyevent(rfbBool down, rfbKeySym key, rfbClientPtr cl)
         else
             ;//ret=suinput_release(inputfd,code);
         
-    //__android_log_print(ANDROID_LOG_INFO,"VNC","injectKey (%d, %d) ret=%d\n", code , down,ret);    
+    __android_log_print(ANDROID_LOG_INFO,"VNC","injectKey (%d, %d) ret=%d\n", code , down,ret);    
     }
 }
 
@@ -738,25 +738,8 @@ int main(int argc, char **argv)
     __android_log_print(ANDROID_LOG_INFO,"VNC","	bpp:    %d\n", (int)scrinfo.bits_per_pixel);
     __android_log_print(ANDROID_LOG_INFO,"VNC","	port:   %d\n", (int)VNC_PORT);
     init_fb_server(argc, argv);
-    /*
-    rfbRunEventLoop(vncscr,-1,TRUE);
     
     while (1)
-    { 
-    while (vncscr->clientHead == NULL)
-             sleep(1); 
-      
-    if (standby>60)
-      sleep(2);    
-    else if (standby>30)
-      sleep(1);    
-    else
-      usleep(100000);    
-    
-    update_screen();
-    }*/
-    
-        while (1)
     {
         while (vncscr->clientHead == NULL)
             rfbProcessEvents(vncscr, 100000);

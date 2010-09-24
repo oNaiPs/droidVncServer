@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen
   xmlns:android="http://schemas.android.com/apk/res/android">
-<EditTextPreference android:key="password" android:title="VNC password" android:password="true" android:summary="Protect your VNC connection"></EditTextPreference>
-<ListPreference android:key="rotation" android:title="Rotation" android:entries="@array/rotation_values" android:entryValues="@array/rotation_values" android:summary="Rotate screen if you like"></ListPreference>
-<ListPreference android:key="scale" android:title="Scale Screen" android:entries="@array/scale_strings" android:entryValues="@array/scale_values" android:summary="Only 50% working for now"></ListPreference>
-<ListPreference android:key="sleep" android:title="Don't let screen turn off" android:entries="@array/sleep_strings" android:entryValues="@array/sleep_strings"></ListPreference>
-<EditTextPreference android:key="port" android:title="VNC port" android:summary="Note: It will not show error if cannot bind port"></EditTextPreference>
-<ListPreference android:key="startonboot" android:title="Start server on boot" android:entryValues="@array/startonboot_values" android:entries="@array/startonboot_values" android:summary="Warning! Just activate if you have your daemon running fine."></ListPreference>
-
- 
+<EditTextPreference android:key="password" android:title="VNC password" android:password="true" android:summary="Protect your VNC connection"></EditTextPreference>-->
+<ListPreference android:defaultValue="0" android:key="rotation" android:title="Rotation" android:entries="@array/rotation_strings" android:entryValues="@array/rotation_values" android:summary="Rotate screen if you like"></ListPreference> 
+<ListPreference android:defaultValue="100" android:key="scale" android:title="Scale Screen" android:entries="@array/scale_strings" android:entryValues="@array/scale_values" android:summary="Only 100 and 50 working for now"></ListPreference>
+<ListPreference android:defaultValue="Off" android:key="sleep" android:title="Don't let screen turn off" android:entries="@array/sleep_strings" android:entryValues="@array/sleep_strings"></ListPreference>
+<EditTextPreference android:inputType="number" android:defaultValue="5901" android:key="port" android:title="VNC port" android:summary="Note: It will not show error if cannot bind port"></EditTextPreference>
+<ListPreference android:defaultValue="Off" android:key="startonboot" android:title="Start server on boot" android:entries="@array/startonboot_strings" android:summary="Warning! Just activate if you have your daemon running fine." android:entryValues="@array/startonboot_values"></ListPreference>
 </PreferenceScreen>
+ 

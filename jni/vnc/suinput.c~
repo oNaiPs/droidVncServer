@@ -209,12 +209,12 @@ int suinput_set_pointer(int uinput_fd, int32_t x, int32_t y)
 
 int suinput_press(int uinput_fd, uint16_t code)
 {
-    return suinput_write(uinput_fd, EV_KEY, code, 1);
+    return suinput_write_syn(uinput_fd, EV_KEY, code, 1);
 }
 
 int suinput_release(int uinput_fd, uint16_t code)
 {
-    return suinput_write(uinput_fd, EV_KEY, code, 0);
+    return suinput_write_syn(uinput_fd, EV_KEY, code, 0);
 }
 
 int suinput_click(int uinput_fd, uint16_t code)

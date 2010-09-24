@@ -54,19 +54,10 @@
 		android:gravity="center"
 >
 </TextView> 
-
+ 
 </LinearLayout>
-  <!-- 
-<TextView 
-android:textSize="15sp" 
-android:text="Click on ad to support project" 
-android:id="@+id/stateLabel" 
-android:layout_width="fill_parent" 
-android:layout_height="wrap_content" 
-android:paddingTop="20px"
-android:layout_alignParentBottom="true"
-android:layout_gravity="bottom"
-></TextView>
+ 
+<!-- 
  
 <com.mobclix.android.sdk.MobclixMMABannerXLAdView
 android:id="@+id/banner_adview"

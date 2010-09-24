@@ -34,8 +34,8 @@ public class StartAtBootService extends Service {
 		SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
 		//Lets see if i need to boot daemon...
-		String startOnBoot=preferences.getString("startonboot", "False");
-		if (startOnBoot.equals("False"))
+		String startOnBoot=preferences.getString("startonboot", "Off");
+		if (startOnBoot.equals("Off"))
 			return;
     	
 		
@@ -53,6 +53,7 @@ public class StartAtBootService extends Service {
 			rotation="-r " + rotation;
 
 			String scaling=preferences.getString("scale", "100");
+			
 			String scaling_string="";
 			if (!scaling.equals("0"))
 				scaling_string="-s " + scaling;
@@ -72,9 +73,7 @@ public class StartAtBootService extends Service {
 
 			sh = Runtime.getRuntime().exec("su");
 			OutputStream os = sh.getOutputStream();
-			writeCommand(os, "chmod 777 /data/data/"+getPackageName()+"/androidvncserver");
-			writeCommand(os, "/data/data/"+getPackageName()+"/androidvncserver "+ password_check + " " + rotation + " " + scaling_string + " " + port_string);
-
+			writeCommand(os, getFilesDir().getAbsolutePath() + "/androidvncserver "+ password_check + " " + rotation + " " + scaling_string + " " + port_string);
 
 		} catch (IOException e) {
 			Log.v("VNC","startServer():" + e.getMessage());

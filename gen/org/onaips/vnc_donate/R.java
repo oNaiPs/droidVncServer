@@ -9,11 +9,13 @@ package org.onaips.vnc_donate;
 
 public final class R {
     public static final class array {
+        public static final int rotation_strings=0x7f070001;
         public static final int rotation_values=0x7f070000;
-        public static final int scale_strings=0x7f070002;
-        public static final int scale_values=0x7f070001;
-        public static final int sleep_strings=0x7f070003;
-        public static final int startonboot_values=0x7f070004;
+        public static final int scale_strings=0x7f070003;
+        public static final int scale_values=0x7f070002;
+        public static final int sleep_strings=0x7f070004;
+        public static final int startonboot_strings=0x7f070005;
+        public static final int startonboot_values=0x7f070006;
     }
     public static final class attr {
         /** <p>Must be a color value, in the form of "<code>#<i>rgb</i></code>", "<code>#<i>argb</i></code>",
@@ -87,13 +89,13 @@ containing a value of this type.
     }
     public static final class raw {
         public static final int androidvncserver=0x7f050000;
-        public static final int indexvnc=0x7f050001;
-        public static final int vncviewer=0x7f050002;
+        public static final int busybox=0x7f050001;
+        public static final int indexvnc=0x7f050002;
+        public static final int vncviewer=0x7f050003;
     }
     public static final class string {
         public static final int app_name=0x7f060000;
         public static final int device_info_fmt=0x7f060001;
-        public static final int package_name=0x7f060002;
     }
     public static final class xml {
         public static final int preferences=0x7f040000;
