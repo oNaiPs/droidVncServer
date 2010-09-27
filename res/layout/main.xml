@@ -57,7 +57,6 @@
  
 </LinearLayout>
  
-<!-- 
  
 <com.mobclix.android.sdk.MobclixMMABannerXLAdView
 android:id="@+id/banner_adview"
@@ -65,5 +64,5 @@ android:layout_height="50dip"
 android:layout_width="320dip"
 android:layout_gravity="bottom"
 android:layout_alignParentBottom="true"
-/>  -->
+/> 
 </RelativeLayout>    

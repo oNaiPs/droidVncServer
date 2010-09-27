@@ -73,7 +73,7 @@ static unsigned int *cmpbuf;
 static rfbScreenInfoPtr vncscr;
 
 
-int idle=0,standby=0,change=0;  
+int idle=0,standby=0,change=0,donate_version=0;  
 static int rotation=0,scaling=0; 
 /*****************************************************************************/
 
@@ -95,9 +95,8 @@ void update_fb_info()
 } 
 
 
-#define PIXEL_TO_VIRTUALPIXEL(i,j) ((j+scrinfo.yoffset)*scrinfo.xres_virtual+i)
-// #define PIXEL_TO_VIRTUALPIXEL(i,j) ((j+scrinfo.yoffset)*scrinfo.xres_virtual+i+scrinfo.xoffset)
-
+// #define PIXEL_TO_VIRTUALPIXEL(i,j) ((j+scrinfo.yoffset)*scrinfo.xres_virtual+i)
+#define PIXEL_TO_VIRTUALPIXEL(i,j) ((j+scrinfo.yoffset)*scrinfo.xres_virtual+i+scrinfo.xoffset)
 #define OUT 32 
 #include "update_screen.c"
 #define OUT 8 
@@ -112,7 +111,6 @@ inline size_t roundUpToPageSize(size_t x) {
   
 static void init_fb(void)
 {  
-    size_t pixels;
     size_t bytespp;
        
     if ((fbfd = open(framebuffer_device, O_RDWR)) == -1)
@@ -130,7 +128,6 @@ static void init_fb(void)
       exit(EXIT_FAILURE);
   }
     
-    pixels = scrinfo.xres * scrinfo.yres;
     bytespp = scrinfo.bits_per_pixel /CHAR_BIT;
     
      __android_log_print(ANDROID_LOG_INFO,"VNC", "line_lenght=%d xres=%d, yres=%d, xresv=%d, yresv=%d, xoffs=%d, yoffs=%d, bpp=%d\n",
@@ -139,9 +136,16 @@ static void init_fb(void)
                         (int)scrinfo.xoffset, (int)scrinfo.yoffset,
                         (int)scrinfo.bits_per_pixel);
      
-     printf("AKII\n");
      
-     size_t fbSize = roundUpToPageSize(fscrinfo.line_length * scrinfo.yres_virtual);
+     
+    size_t size=scrinfo.yres_virtual;
+    if (size<scrinfo.yres*2)
+    {
+        __android_log_print(ANDROID_LOG_INFO,"VNC","Using Droid workaround\n");
+	size=scrinfo.yres*2;
+    }
+    
+    size_t fbSize = roundUpToPageSize(fscrinfo.line_length * size);
 
     fbmmap = mmap(NULL, fbSize , PROT_READ|PROT_WRITE ,  MAP_SHARED , fbfd, 0);
  
@@ -186,6 +190,28 @@ static void cleanup_kbd()
 }
 
 /*****************************************************************************/
+void *sendClientDisconnectedNotification(void *t)
+{
+    system("am broadcast -a org.onaips.vnc.intent.action.DaemonCommunication.ClientDisconnected");
+    pthread_exit(NULL);
+
+}
+
+void *sendClientConnectedNotification(void *t)
+{
+    system("am broadcast -a org.onaips.vnc.intent.action.DaemonCommunication.ClientConnected");
+    pthread_exit(NULL);
+
+}
+
+
+static ClientGoneHookPtr clientGone(rfbClientPtr cl)
+{
+  
+  pthread_t t;
+  pthread_create(&t, NULL, sendClientDisconnectedNotification, NULL);
+  return 0;
+}
 
 static rfbNewClientHookPtr clientHook(rfbClientPtr cl)
 {
@@ -195,6 +221,11 @@ static rfbNewClientHookPtr clientHook(rfbClientPtr cl)
     
   }
 
+  pthread_t t;
+  pthread_create(&t, NULL, sendClientConnectedNotification, NULL);
+  
+  cl->clientGoneHook=clientGone;
+  
   return RFB_CLIENT_ACCEPT;
 }
 
@@ -237,11 +268,12 @@ static void init_fb_server(int argc, char **argv)
         vncscr->passwordCheck = rfbCheckPasswordByList;
     } 
     
-#ifdef DONATE_VERSION
+
+if (donate_version)
     vncscr->httpDir="/data/data/org.onaips.vnc_donate/files/";
-#else
+else
     vncscr->httpDir="/data/data/org.onaips.vnc/files/";
-#endif
+
     
     vncscr->serverFormat.redShift=scrinfo.red.offset;
     vncscr->serverFormat.greenShift=scrinfo.green.offset; 
@@ -292,7 +324,7 @@ static void keyevent(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 {
     int code;
     
-    __android_log_print(ANDROID_LOG_INFO,"VNC","Got keysym: %04x (down=%d)\n", (unsigned int)key, (int)down);
+//     __android_log_print(ANDROID_LOG_INFO,"VNC","Got keysym: %04x (down=%d)\n", (unsigned int)key, (int)down);
     
     int sh = 0;
     int alt = 0;
@@ -300,7 +332,7 @@ static void keyevent(rfbBool down, rfbKeySym key, rfbClientPtr cl)
     if ((code = keysym2scancode(down, key, cl,&sh,&alt)))
     {
         
-        int ret;
+        int ret=0;
         
         if (key && down)
         {
@@ -316,7 +348,7 @@ static void keyevent(rfbBool down, rfbKeySym key, rfbClientPtr cl)
         else
             ;//ret=suinput_release(inputfd,code);
         
-    __android_log_print(ANDROID_LOG_INFO,"VNC","injectKey (%d, %d) ret=%d\n", code , down,ret);    
+//     __android_log_print(ANDROID_LOG_INFO,"VNC","injectKey (%d, %d) ret=%d\n", code , down,ret);    
     }
 }
 
@@ -396,6 +428,7 @@ static int keysym2scancode(rfbBool down, rfbKeySym c, rfbClientPtr cl, int *sh, 
     case 0xffff: return 158;// del -> back
     case 0xff55: return 229;// PgUp -> menu
     case 0xffcf: return 127;// F2 -> search
+    case 0xffe3: return 127;// left ctrl -> search
     case 0xff56: return 61;// PgUp -> call
     case 0xff57: return 107;// End -> endcall
     case 0xffc2: return 211;// F5 -> focus
@@ -705,6 +738,9 @@ int main(int argc, char **argv)
                     i++; 
 		    VNC_PORT=atoi(argv[i]);
                     break;
+		case 'd': 
+                    donate_version=1;
+                    break;
 		case 'r':
                     i++; 
 		    r=atoi(argv[i]);
@@ -753,7 +789,6 @@ int main(int argc, char **argv)
 	  rfbProcessEvents(vncscr, 100000);
 	else
 	  rfbProcessEvents(vncscr, 10000);
-        
         
         update_screen();
     }

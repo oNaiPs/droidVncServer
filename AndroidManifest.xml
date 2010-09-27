@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	package="org.onaips.vnc_donate" android:versionName="v0.91" android:versionCode="42">
+	android:versionCode="43" android:versionName="0.92 DroidX sliding fixed (must confirm),Seach was not working in Ctrl button,system notification when client connects" package="org.onaips.vnc">
 	<uses-sdk android:minSdkVersion="3" />
 	<application android:debuggable="false" android:icon="@drawable/icon"
 		android:label="droid VNC server" android:name="MainApplication">
@@ -11,7 +11,7 @@
 				<action android:name="android.intent.action.MAIN" />
 				<category android:name="android.intent.category.LAUNCHER" />
 
-			</intent-filter>
+			</intent-filter>  
 		</activity>
 		<activity android:name="preferences" android:label="Preferences"></activity>
 
@@ -22,10 +22,10 @@
 
 		<service android:name="StartAtBootService">
 			<intent-filter>
-				<action android:name="org.onaips.vnc_donate.StartAtBootService"></action>
+				<action android:name="org.onaips.vnc.StartAtBootService"></action>
 			</intent-filter>
 		</service>
-
+		
 		<receiver android:name="StartAtBootServiceReceiver">
 			<intent-filter>
 				<action android:name="android.intent.action.BOOT_COMPLETED">
@@ -34,6 +34,14 @@
 				</category>
 			</intent-filter>
 		</receiver>
+		
+		<receiver android:name=".DaemonCommunication"> 
+			<intent-filter> 
+				<action android:name="org.onaips.vnc.intent.action.DaemonCommunication.ClientConnected" />
+				<action android:name="org.onaips.vnc.intent.action.DaemonCommunication.ClientDisconnected" /> 
+			</intent-filter> 
+		</receiver>
+		
 	</application>
 
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
