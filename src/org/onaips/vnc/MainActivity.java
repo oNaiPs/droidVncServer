@@ -33,14 +33,19 @@ import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.mobclix.android.sdk.Mobclix;
+
+
 
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
+import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -73,6 +78,9 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.mobclix.android.sdk.MobclixAdView;
+import com.mobclix.android.sdk.MobclixMMABannerXLAdView;
+import 	android.view.View;
 
 public class MainActivity extends Activity 
 {      
@@ -82,7 +90,7 @@ public class MainActivity extends Activity
 	private static final int MENU_SENDLOG = 3; 
 	private static final int MENU_CHANGELOG = 4;
 	private static final int APP_ID = 123;
-	private static final String changelog="(i'm looking for someone to write a tutorial for vnc server)<br><br>- DroidX not sliding now (must confirm)<br>- [Fix] Seach was not working in Ctrl<br>- [Add] System notification when client connects";
+	private static final String changelog="- [Fix] Start/stop server now handled by busybox, it will ask if you don't have it (please report if you still have the issue) - Sorry for that";
 
 	private PowerManager.WakeLock wakeLock = null;
 	private Timer watchdogTimer=null;
@@ -92,6 +100,14 @@ public class MainActivity extends Activity
 	AlertDialog startDialog;
 
  
+	@Override
+	protected void onDestroy()
+	{
+		super.onDestroy();
+		unregisterReceiver(mReceiver);
+		unregisterReceiver(activityReceiver);
+	}
+
 
 	/** Called when the activity is first created. */
 	@Override
@@ -102,6 +118,7 @@ public class MainActivity extends Activity
 		setContentView(R.layout.main);
 
 
+
 		// Initialize preferences
 		preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -109,40 +126,53 @@ public class MainActivity extends Activity
 			watchdogTimer.cancel();
 
 
+		checkForBusybox();
+
+
+
 		if (!hasRootPermission())
 		{
-			Log.v("VNC","You don't have root permissions...!!!");
-			showTextOnScreen("You don't have root permissions...Please ROOT your phone first!!!");
-			//System.exit(-1);
-		}
+			startDialog.dismiss();
 
+			Log.v("VNC","You don't have root permissions...!!!");
+			startDialog = new AlertDialog.Builder(this).create();
+			startDialog.setTitle("Cannot continue");
+			startDialog.setMessage("You don't have root permissions.\nPlease root your phone first!\n\nDo you want to try out anyway?");
+			startDialog.setIcon(R.drawable.icon);
+			startDialog.setButton("Yes", new DialogInterface.OnClickListener() {
+
+				@Override
+				public void onClick(DialogInterface arg0, int arg1) {
+					startDialog.dismiss();
+				}
+			});
+			startDialog.setButton2("No", new DialogInterface.OnClickListener() {
+
+				@Override
+				public void onClick(DialogInterface arg0, int arg1) {
+					System.exit(0);
+				}
+			});
+			startDialog.show();
+		}
 
 		showInitialScreen(false);
 
-		boolean serverRunning=isAndroidServerRunning();
-
-		if (("On".equals(preferences.getString("sleep", "Off"))) && serverRunning)
-		{
-			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-			wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,"droid VNC");
-			wakeLock.acquire();	
-		}
-		else
-		{
-			if (wakeLock!=null)
-				wakeLock.release();
-		}
-
 
 		// register wifi event receiver
-		mReceiver receiver=new mReceiver();
-		registerReceiver(receiver,  new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-		registerReceiver(receiver,  new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+		registerReceiver(mReceiver,  new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 		registerReceiver(activityReceiver, new IntentFilter("org.onaips.vnc.CLIENTCONNECTED"));
 		registerReceiver(activityReceiver, new IntentFilter("org.onaips.vnc.CLIENTDISCONNECTED"));
 
 
 		setStateLabels(isAndroidServerRunning());
+
+		boolean hidead=preferences.getBoolean("hidead", false);
+		if (hidead)
+			findViewById(R.id.banner_adview).setVisibility(View.INVISIBLE);
+
+		checkForBusybox();
+
 
 		findViewById(R.id.Button01).setOnClickListener(new OnClickListener() {
 			@Override
@@ -160,13 +190,13 @@ public class MainActivity extends Activity
 					return;
 				} 
 
+
 				prepareWatchdog("Stopping server. Please wait...","Couldn't Stop server",false);
 
 				Thread t=new Thread(){
 					public void run()
 					{
 						stopServer();
-
 					}
 				};
 				t.start();
@@ -175,6 +205,45 @@ public class MainActivity extends Activity
 			}
 		}); 
 	}
+
+
+	public boolean hasBusybox()
+	{
+		File busyboxFile=findExecutableOnPath("busybox");
+		return busyboxFile!=null;
+	}
+
+	public boolean checkForBusybox()
+	{
+		boolean has=hasBusybox();
+		if (!has)
+		{
+			Log.v("VNC","Busybox not found...!!!");
+			startDialog = new AlertDialog.Builder(this).create();
+			startDialog.setTitle("Cannot continue");
+			startDialog.setMessage("I didn't found busybox in your device, do you want to install it from the market?\nYou can try to run without it.\n(I am not responsible for this application)");
+			startDialog.setIcon(R.drawable.icon);
+			startDialog.setButton("Yes, install it", new DialogInterface.OnClickListener() {
+
+				@Override
+				public void onClick(DialogInterface arg0, int arg1) {
+					Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=stericson.busybox"));
+					startActivity(myIntent);
+				}
+			});
+			startDialog.setButton2("No, let me try without it", new DialogInterface.OnClickListener() {
+
+				@Override
+				public void onClick(DialogInterface arg0, int arg1) {
+					startDialog.dismiss();
+				}
+			});
+			startDialog.show();
+
+		}
+		return has;
+	}
+
 
 	public String packageVersion()
 	{
@@ -290,23 +359,6 @@ public class MainActivity extends Activity
 		}, (long)5000);
 	}
 
-	public boolean hasExecutable(String s)
-	{
-		boolean has = true;
-		try {
-			File exe = new File("/system/bin/" + s);
-			if (exe.exists() == false) {
-				exe = new File("/system/xbin/" + s);
-				if (exe.exists() == false) {
-					has = false;
-				}
-			}
-		} catch (Exception e) {
-			has = false;
-		}
-
-		return has;
-	}
 
 	public void setStateLabels(boolean state)
 	{
@@ -372,22 +424,27 @@ public class MainActivity extends Activity
 			OutputStream os = sh.getOutputStream();
 
 
-			if (hasExecutable("killall"))
+			if (hasBusybox())
 			{
-				writeCommand(os, "killall androidvncserver");
-				writeCommand(os, "killall -KILL androidvncserver");	
+				writeCommand(os, "busybox killall androidvncserver");
+				writeCommand(os, "busybox killall -KILL androidvncserver");	
 			}
 			else
 			{
-				writeCommand(os, getFilesDir().getAbsolutePath() + "/busybox killall androidvncserver");
-				writeCommand(os, getFilesDir().getAbsolutePath() + "/busybox killall -KILL androidvncserver");		
+				if (findExecutableOnPath("killall")==null)
+				{
+					showTextOnScreen("I couldn't find the killall executable, please install busybox or i can't stop server");
+					Log.v("VNC","I couldn't find the killall executable, please install busybox or i can't stop server");
+				}
+				writeCommand(os, "killall androidvncserver");
+				writeCommand(os, "killall -KILL androidvncserver");
 			}
 
 			writeCommand(os, "exit");
 
 			os.flush();
 			os.close();
-			
+
 			//lets clear notifications
 			String ns = Context.NOTIFICATION_SERVICE;
 			NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
@@ -435,13 +492,13 @@ public class MainActivity extends Activity
 			rotation="-r " + rotation;
 
 			String scaling=preferences.getString("scale", "100");
- 
+
 			String scaling_string="";
 			if (!scaling.equals("0"))
 				scaling_string="-s " + scaling;
 
 			String donate=free_version()?"":" -d ";
-			
+
 			String port=preferences.getString("port", "5901");
 			try
 			{
@@ -457,7 +514,12 @@ public class MainActivity extends Activity
 
 			sh = Runtime.getRuntime().exec("su");
 			OutputStream os = sh.getOutputStream();
-			writeCommand(os, getFilesDir().getAbsolutePath() + "/androidvncserver "+ password_check + " " + rotation + " " + scaling_string + " " + port_string + donate);
+
+			writeCommand(os, "chmod 777 " + getFilesDir().getAbsolutePath() + "/androidvncserver");
+			writeCommand(os,getFilesDir().getAbsolutePath() + "/androidvncserver "+ password_check + " " + rotation + " " + scaling_string + " " + port_string + donate);
+
+			//dont show password on logcat
+			Log.v("VNC","Starting " + getFilesDir().getAbsolutePath() + "/androidvncserver " + " " + rotation + " " + scaling_string + " " + port_string + donate);
 
 
 		} catch (IOException e) {
@@ -534,15 +596,23 @@ public class MainActivity extends Activity
 
 	public boolean isAndroidServerRunning()
 	{
-
 		String result="";
 		Process sh;
 		try {
-			if (hasExecutable("ps"))
+			/*if (hasExecutable("ps"))
 				sh = Runtime.getRuntime().exec("ps");
+			else*/
+			if (hasBusybox())
+				{
+				sh = Runtime.getRuntime().exec("busybox ps w");
+				}
 			else
-				sh = Runtime.getRuntime().exec(getFilesDir().getAbsolutePath() + "/busybox ps w");	
-
+				{
+				if (findExecutableOnPath("ps")==null)
+					showTextOnScreen("I cant find the ps executable, please install busybox or i'm wont be able to check server state");
+				sh = Runtime.getRuntime().exec("ps");
+				}
+			
 			InputStream is=sh.getInputStream();
 			InputStreamReader isr = new InputStreamReader(is);
 			BufferedReader br = new BufferedReader(isr);
@@ -551,18 +621,17 @@ public class MainActivity extends Activity
 			while ((line  = br.readLine()) != null) {
 				result+=line;
 				if (result.indexOf("androidvncserver")>0)
+				{
+					Log.v("VNC","isAndroidServerRunning? yes");
 					return true;
+				}
 			} 
-			OutputStream os = sh.getOutputStream();
-			writeCommand(os, "exit");
-			os.flush();
-			os.close();
-		} catch (IOException e) {
-			Log.v("VNC"," isAndroidServerRunning():" + e.getMessage());
-		} catch (Exception e) {
+
+		}  catch (Exception e) {
 			Log.v("VNC"," isAndroidServerRunning():" + e.getMessage());
 		}
 
+		Log.v("VNC","isAndroidServerRunning? no");
 		return false;
 	}
 
@@ -711,33 +780,34 @@ public class MainActivity extends Activity
 		os.write((command + "\n").getBytes("ASCII"));
 	}
 
-	class mReceiver extends BroadcastReceiver {
+	public BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		@Override public void onReceive(Context context, Intent intent) {
 			NetworkInfo info = intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
 			if (info.getType() == ConnectivityManager.TYPE_MOBILE || info.getType()==ConnectivityManager.TYPE_WIFI) {
 				setStateLabels(isAndroidServerRunning());
-			}
+			} 
 		}
 	};
 
 	public BroadcastReceiver activityReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context1, Intent intent) {
-			final int HELLO_ID = 1;
-			if (intent.getAction().equalsIgnoreCase("org.onaips.vnc.CLIENTCONNECTED"))
+			if (intent.getAction().equalsIgnoreCase("org.onaips.vnc.CLIENTCONNECTED") && (preferences.getBoolean("notifyclient", true)))
 			{
+
 				String ns = Context.NOTIFICATION_SERVICE;
 				NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
 
 				int icon = R.drawable.icon;
-				CharSequence tickerText = "Client connected to VNC server";
+				CharSequence tickerText = intent.getStringExtra("clientip") + " connected to VNC server";
 				long when = System.currentTimeMillis();
+
 
 				Notification notification = new Notification(icon, tickerText, when);
 
 				Context context = getApplicationContext();
 				CharSequence contentTitle = "Droid VNC Server";
-				CharSequence contentText = "Client Connected";
+				CharSequence contentText = "Client Connected from " + intent.getStringExtra("clientip");
 				Intent notificationIntent = new Intent();
 				PendingIntent contentIntent = PendingIntent.getActivity(context1, 0, notificationIntent, 0);
 
@@ -745,14 +815,43 @@ public class MainActivity extends Activity
 
 
 				mNotificationManager.notify(APP_ID, notification);
-				
+
+				//lets see if we should keep screen on 
+				if (preferences.getBoolean("screenturnoff", false))
+				{
+					PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+					wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,"VNC");
+					wakeLock.acquire();	
+				}
 			}
 			else if  (intent.getAction().equalsIgnoreCase("org.onaips.vnc.CLIENTDISCONNECTED"))
 			{
 				String ns = Context.NOTIFICATION_SERVICE;
 				NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
 				mNotificationManager.cancel(APP_ID);
+
+				if (wakeLock!=null && wakeLock.isHeld())
+					wakeLock.release();
 			}
+
 		}
 	};
+
+	private static File findExecutableOnPath(String executableName)  
+	{  
+		String systemPath = System.getenv("PATH");  
+		String[] pathDirs = systemPath.split(File.pathSeparator);  
+
+		File fullyQualifiedExecutable = null;  
+		for (String pathDir : pathDirs)  
+		{  
+			File file = new File(pathDir, executableName);  
+			if (file.isFile())  
+			{  
+				fullyQualifiedExecutable = file;  
+				break;  
+			}  
+		}  
+		return fullyQualifiedExecutable;  
+	}  
 }

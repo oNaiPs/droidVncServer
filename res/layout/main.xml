@@ -39,7 +39,7 @@
 		android:shadowRadius="0.5"
 		android:shadowColor="#111"
 		>
-</Button>
+</Button> 
 
 
 <TextView android:textSize="30sp" android:text="@+id/TextView01" android:id="@+id/stateLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingTop="10dp"
@@ -56,7 +56,7 @@
 </TextView> 
  
 </LinearLayout>
- 
+   
  
 <com.mobclix.android.sdk.MobclixMMABannerXLAdView
 android:id="@+id/banner_adview"

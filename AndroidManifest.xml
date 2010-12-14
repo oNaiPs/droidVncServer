@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	android:versionCode="43" android:versionName="0.92 DroidX sliding fixed (must confirm),Seach was not working in Ctrl button,system notification when client connects" package="org.onaips.vnc">
+	package="org.onaips.vnc" android:versionName="0.98 will now use only busybox, if you don't have it, it will ask for it. I'm going to merge donate and free versions in time." android:versionCode="50">
 	<uses-sdk android:minSdkVersion="3" />
 	<application android:debuggable="false" android:icon="@drawable/icon"
 		android:label="droid VNC server" android:name="MainApplication">
 		<activity android:name=".MainActivity" android:label="@string/app_name"
-			android:icon="@drawable/icon" android:launchMode="singleInstance"
-			android:screenOrientation="portrait">
+			android:icon="@drawable/icon" android:launchMode="singleInstance">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 				<category android:name="android.intent.category.LAUNCHER" />
@@ -47,8 +46,8 @@
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
 	<uses-permission android:name="android.permission.ACCESS_SUPERUSER"></uses-permission>
 	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
+		<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
 	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
-	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
 	<uses-permission android:name="android.permission.GET_TASKS"></uses-permission>
 	<uses-permission android:name="android.permission.READ_PHONE_STATE"></uses-permission>
 	<uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>

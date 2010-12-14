@@ -6,25 +6,54 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import android.app.Application;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 public class MainApplication extends Application {
 
 	@Override
 	public void onCreate() {
-		// TODO Auto-generated method stub
-		super.onCreate();
+		super.onCreate(); 
 
-		createBinary();
+		if (firstRun())
+			createBinary();
 	}
 
+	public boolean firstRun()
+	{
+		int versionCode = 0;
+		try {
+			versionCode = getPackageManager()
+			.getPackageInfo(getPackageName(), PackageManager.GET_META_DATA)
+			.versionCode;
+		} catch (NameNotFoundException e) {
+			Log.e("VNC", "Package not found... Odd, since we're in that package...", e);
+		}
+
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		int lastFirstRun = prefs.getInt("last_run", 0);
+
+		if (lastFirstRun >= versionCode) {
+			Log.d("VNC", "Not first run");
+			return false;
+		}
+		Log.d("VNC", "First run for version " + versionCode);
+
+		SharedPreferences.Editor editor = prefs.edit();
+		editor.putInt("last_run", versionCode);
+		editor.commit();
+		return true;
+	}
 
 	public void createBinary()  
 	{ 
 		copyBinary(R.raw.androidvncserver, getFilesDir().getAbsolutePath() + "/androidvncserver");
 		copyBinary(R.raw.vncviewer, getFilesDir().getAbsolutePath()+"/VncViewer.jar");
 		copyBinary(R.raw.indexvnc, getFilesDir().getAbsolutePath()+"/index.vnc");
-		copyBinary(R.raw.busybox, getFilesDir().getAbsolutePath()+"/busybox");
+
 		Process sh;
 		try {
 			sh = Runtime.getRuntime().exec("su");
@@ -33,7 +62,7 @@ public class MainApplication extends Application {
 
 			//chmod 777 SHOULD exist
 			writeCommand(os, "chmod 777 " + getFilesDir().getAbsolutePath() + "/androidvncserver");
-			writeCommand(os, "chmod 777 " + getFilesDir().getAbsolutePath() +"/busybox");		
+			os.close();
 		} catch (IOException e) {
 			Log.v("VNC",e.getMessage());		
 		}catch (Exception e) {
@@ -70,4 +99,6 @@ public class MainApplication extends Application {
 	{
 		os.write((command + "\n").getBytes("ASCII"));
 	} 
+	
+
 }

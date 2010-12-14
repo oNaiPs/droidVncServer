@@ -4,8 +4,12 @@
 <EditTextPreference android:key="password" android:title="VNC password" android:password="true" android:summary="Protect your VNC connection"></EditTextPreference>-->
 <ListPreference android:defaultValue="0" android:key="rotation" android:title="Rotation" android:entries="@array/rotation_strings" android:entryValues="@array/rotation_values" android:summary="Rotate screen if you like"></ListPreference> 
 <ListPreference android:defaultValue="100" android:key="scale" android:title="Scale Screen" android:entries="@array/scale_strings" android:entryValues="@array/scale_values" android:summary="Only 100 and 50 working for now"></ListPreference>
-<ListPreference android:defaultValue="Off" android:key="sleep" android:title="Don't let screen turn off" android:entries="@array/sleep_strings" android:entryValues="@array/sleep_strings"></ListPreference>
+
 <EditTextPreference android:inputType="number" android:defaultValue="5901" android:key="port" android:title="VNC port" android:summary="Note: It will not show error if cannot bind port"></EditTextPreference>
-<ListPreference android:defaultValue="Off" android:key="startonboot" android:title="Start server on boot" android:entries="@array/startonboot_strings" android:summary="Warning! Just activate if you have your daemon running fine." android:entryValues="@array/startonboot_values"></ListPreference>
+
+<CheckBoxPreference android:summaryOn="Warning! Just activate if you have your daemon running fine." android:title="Start server on boot" android:defaultValue="false" android:summaryOff="Warning! Just activate if you have your daemon running fine." android:key="startdaemononboot"></CheckBoxPreference>
+<CheckBoxPreference android:key="screenturnoff" android:title="Don't let screen turn off" android:defaultValue="false"></CheckBoxPreference>
+<CheckBoxPreference android:key="notifyclient" android:title="Notify when client connects" android:summary="Show notification on status bar" android:defaultValue="true"></CheckBoxPreference>
+<CheckBoxPreference android:key="hidead" android:defaultValue="false" android:title="Disable Bottom Ad" android:summary="Select this if you don't want to view the ad."></CheckBoxPreference>
 </PreferenceScreen>
  
