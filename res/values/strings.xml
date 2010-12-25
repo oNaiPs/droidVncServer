@@ -27,6 +27,13 @@
 <item>30</item>
 <item>20</item>
 </string-array>
+<string-array name="test_mode_strings">
+<item>0</item>
+<item>1</item>
+<item>2</item>
+<item>3</item>
+<item>4</item>
+</string-array>
 <string-array name="sleep_strings">
 <item>On</item>
 <item>Off</item>

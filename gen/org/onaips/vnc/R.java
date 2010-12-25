@@ -13,9 +13,10 @@ public final class R {
         public static final int rotation_values=0x7f070000;
         public static final int scale_strings=0x7f070003;
         public static final int scale_values=0x7f070002;
-        public static final int sleep_strings=0x7f070004;
-        public static final int startonboot_strings=0x7f070005;
-        public static final int startonboot_values=0x7f070006;
+        public static final int sleep_strings=0x7f070005;
+        public static final int startonboot_strings=0x7f070006;
+        public static final int startonboot_values=0x7f070007;
+        public static final int test_mode_strings=0x7f070004;
     }
     public static final class attr {
         /** <p>Must be a color value, in the form of "<code>#<i>rgb</i></code>", "<code>#<i>argb</i></code>",

@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Timer;
@@ -59,6 +61,8 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
+import android.net.LocalServerSocket;
+import android.net.LocalSocket;
 import android.net.NetworkInfo;
 import android.net.Uri; 
 import android.net.NetworkInfo.DetailedState;
@@ -66,8 +70,10 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
+import android.text.ClipboardManager;
 import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
@@ -90,7 +96,9 @@ public class MainActivity extends Activity
 	private static final int MENU_SENDLOG = 3; 
 	private static final int MENU_CHANGELOG = 4;
 	private static final int APP_ID = 123;
-	private static final String changelog="- [Fix] Start/stop server now handled by busybox, it will ask if you don't have it (please report if you still have the issue) - Sorry for that";
+	private static final String changelog="- [Add] Clipboard text support!";
+	public static String SOCKET_ADDRESS = "org.onaips.vnc.localsocket";
+
 
 	private PowerManager.WakeLock wakeLock = null;
 	private Timer watchdogTimer=null;
@@ -99,13 +107,12 @@ public class MainActivity extends Activity
 	ProgressDialog dialog=null;
 	AlertDialog startDialog;
 
- 
-	@Override
+
+	@Override 
 	protected void onDestroy()
 	{
 		super.onDestroy();
 		unregisterReceiver(mReceiver);
-		unregisterReceiver(activityReceiver);
 	}
 
 
@@ -161,8 +168,9 @@ public class MainActivity extends Activity
 
 		// register wifi event receiver
 		registerReceiver(mReceiver,  new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-		registerReceiver(activityReceiver, new IntentFilter("org.onaips.vnc.CLIENTCONNECTED"));
-		registerReceiver(activityReceiver, new IntentFilter("org.onaips.vnc.CLIENTDISCONNECTED"));
+
+		SocketListener s=new SocketListener();
+		s.start();
 
 
 		setStateLabels(isAndroidServerRunning());
@@ -258,10 +266,6 @@ public class MainActivity extends Activity
 		return version;
 	}
 
-	public boolean free_version()
-	{
-		return getPackageName().equals("org.onaips.vnc");
-	}
 
 	public void showInitialScreen(boolean forceShow)
 	{
@@ -282,29 +286,26 @@ public class MainActivity extends Activity
 		startDialog.setMessage(Html.fromHtml(changelog));
 		startDialog.setIcon(R.drawable.icon);
 
-		if (free_version())
-		{
-			startDialog.setButton(AlertDialog.BUTTON1,"OK", new DialogInterface.OnClickListener() {
 
-				@Override
-				public void onClick(DialogInterface arg0, int arg1) {
-					startDialog.dismiss();			
-				}
-			});
+		startDialog.setButton(AlertDialog.BUTTON1,"OK", new DialogInterface.OnClickListener() {
 
-			startDialog.setButton2("Donate Version", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface arg0, int arg1) {
-					Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=org.onaips.vnc_donate"));
-					startActivity(myIntent);
+			@Override
+			public void onClick(DialogInterface arg0, int arg1) {
+				startDialog.dismiss();			
+			}
+		});
 
-				} 
-			});
+		startDialog.setButton2("Donate", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface arg0, int arg1) {
+				Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=org.onaips.donate"));
+				startActivity(myIntent);
 
-			startDialog.show();
-		}
-		else
-			startDialog.show();
+			} 
+		});
+
+		startDialog.show();
+
 	}
 
 
@@ -431,13 +432,13 @@ public class MainActivity extends Activity
 			}
 			else
 			{
+				writeCommand(os, "killall androidvncserver");
+				writeCommand(os, "killall -KILL androidvncserver");
 				if (findExecutableOnPath("killall")==null)
 				{
 					showTextOnScreen("I couldn't find the killall executable, please install busybox or i can't stop server");
 					Log.v("VNC","I couldn't find the killall executable, please install busybox or i can't stop server");
 				}
-				writeCommand(os, "killall androidvncserver");
-				writeCommand(os, "killall -KILL androidvncserver");
 			}
 
 			writeCommand(os, "exit");
@@ -497,9 +498,10 @@ public class MainActivity extends Activity
 			if (!scaling.equals("0"))
 				scaling_string="-s " + scaling;
 
-			String donate=free_version()?"":" -d ";
-
 			String port=preferences.getString("port", "5901");
+
+			String tm=preferences.getString("testmode", "0");
+			String testmode="-t " + tm;
 			try
 			{
 				int port1=Integer.parseInt(port);
@@ -516,10 +518,10 @@ public class MainActivity extends Activity
 			OutputStream os = sh.getOutputStream();
 
 			writeCommand(os, "chmod 777 " + getFilesDir().getAbsolutePath() + "/androidvncserver");
-			writeCommand(os,getFilesDir().getAbsolutePath() + "/androidvncserver "+ password_check + " " + rotation + " " + scaling_string + " " + port_string + donate);
+			writeCommand(os,getFilesDir().getAbsolutePath() + "/androidvncserver "+ password_check + " " + rotation + " " + scaling_string + " " + port_string +" " +  testmode);
 
 			//dont show password on logcat
-			Log.v("VNC","Starting " + getFilesDir().getAbsolutePath() + "/androidvncserver " + " " + rotation + " " + scaling_string + " " + port_string + donate);
+			Log.v("VNC","Starting " + getFilesDir().getAbsolutePath() + "/androidvncserver " + " " + rotation + " " + scaling_string + " " + port_string + " " + testmode);
 
 
 		} catch (IOException e) {
@@ -603,16 +605,16 @@ public class MainActivity extends Activity
 				sh = Runtime.getRuntime().exec("ps");
 			else*/
 			if (hasBusybox())
-				{
+			{
 				sh = Runtime.getRuntime().exec("busybox ps w");
-				}
+			}
 			else
-				{
+			{
 				if (findExecutableOnPath("ps")==null)
 					showTextOnScreen("I cant find the ps executable, please install busybox or i'm wont be able to check server state");
 				sh = Runtime.getRuntime().exec("ps");
-				}
-			
+			}
+
 			InputStream is=sh.getInputStream();
 			InputStreamReader isr = new InputStreamReader(is);
 			BufferedReader br = new BufferedReader(isr);
@@ -789,53 +791,96 @@ public class MainActivity extends Activity
 		}
 	};
 
-	public BroadcastReceiver activityReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context1, Intent intent) {
-			if (intent.getAction().equalsIgnoreCase("org.onaips.vnc.CLIENTCONNECTED") && (preferences.getBoolean("notifyclient", true)))
-			{
 
-				String ns = Context.NOTIFICATION_SERVICE;
-				NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
+	public void showClientConnected(String c)
+	{
+		String ns = Context.NOTIFICATION_SERVICE;
+		NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
 
-				int icon = R.drawable.icon;
-				CharSequence tickerText = intent.getStringExtra("clientip") + " connected to VNC server";
-				long when = System.currentTimeMillis();
+		int icon = R.drawable.icon;
+		CharSequence tickerText = c + " connected to VNC server";
+		long when = System.currentTimeMillis();
 
 
-				Notification notification = new Notification(icon, tickerText, when);
+		Notification notification = new Notification(icon, tickerText, when);
 
-				Context context = getApplicationContext();
-				CharSequence contentTitle = "Droid VNC Server";
-				CharSequence contentText = "Client Connected from " + intent.getStringExtra("clientip");
-				Intent notificationIntent = new Intent();
-				PendingIntent contentIntent = PendingIntent.getActivity(context1, 0, notificationIntent, 0);
+		Context context = getApplicationContext();
+		CharSequence contentTitle = "Droid VNC Server";
+		CharSequence contentText = "Client Connected from " + c;
+		Intent notificationIntent = new Intent();
+		PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, 0);
 
-				notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
+		notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
 
+		mNotificationManager.notify(APP_ID, notification);
 
-				mNotificationManager.notify(APP_ID, notification);
-
-				//lets see if we should keep screen on 
-				if (preferences.getBoolean("screenturnoff", false))
-				{
-					PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-					wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,"VNC");
-					wakeLock.acquire();	
-				}
-			}
-			else if  (intent.getAction().equalsIgnoreCase("org.onaips.vnc.CLIENTDISCONNECTED"))
-			{
-				String ns = Context.NOTIFICATION_SERVICE;
-				NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
-				mNotificationManager.cancel(APP_ID);
-
-				if (wakeLock!=null && wakeLock.isHeld())
-					wakeLock.release();
-			}
-
+		//lets see if we should keep screen on 
+		if (preferences.getBoolean("screenturnoff", false))
+		{
+			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+			wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,"VNC");
+			wakeLock.acquire();	
 		}
-	};
+	}
+
+	void showClientDisconnected()
+	{
+		String ns = Context.NOTIFICATION_SERVICE;
+		NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
+		mNotificationManager.cancel(APP_ID);
+
+		if (wakeLock!=null && wakeLock.isHeld())
+			wakeLock.release();
+	}
+
+
+	class SocketListener extends Thread {
+		@Override
+		public void run() {
+			try {
+				LocalServerSocket server = new LocalServerSocket(SOCKET_ADDRESS);
+				while (true) {	
+					LocalSocket receiver = server.accept();
+					if (receiver != null) {
+						InputStream input = receiver.getInputStream();
+
+						int readed = input.read();
+
+						StringBuffer bytes=new StringBuffer(2048);
+						while (readed != -1) {
+							bytes.append((char) readed);
+							readed = input.read();
+						}
+						//showTextOnScreen(bytes.toString());
+						Log.v("VNC",bytes.substring(0, 6));
+
+
+						if (bytes.substring(0, 6).equals("~CLIP|"))
+						{
+							bytes.delete(0, 6);  
+							ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE); 
+
+							clipboard.setText(bytes.toString());
+						}
+						else if (preferences.getBoolean("notifyclient", true))
+						{
+							if (bytes.substring(0, 11).equals("~CONNECTED|"))
+							{
+								bytes.delete(0, 11);
+								showClientConnected(bytes.toString());
+							}
+							else if (bytes.substring(0, 14).equals("~DISCONNECTED|"))
+							{
+								showClientDisconnected();
+							}
+						}
+					}
+				}
+			} catch (IOException e) {
+				Log.e(getClass().getName(), e.getMessage());
+			}
+		}
+	}
 
 	private static File findExecutableOnPath(String executableName)  
 	{  

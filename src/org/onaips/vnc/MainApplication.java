@@ -60,6 +60,8 @@ public class MainApplication extends Application {
 
 			OutputStream os = sh.getOutputStream();
 
+			writeCommand(os, "killall androidvncserver");
+			writeCommand(os, "killall -KILL androidvncserver");			
 			//chmod 777 SHOULD exist
 			writeCommand(os, "chmod 777 " + getFilesDir().getAbsolutePath() + "/androidvncserver");
 			os.close();
