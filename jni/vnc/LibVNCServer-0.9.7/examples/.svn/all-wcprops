@@ -1,0 +1,125 @@
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples
+END
+rotate.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/rotate.c
+END
+simple15.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/simple15.c
+END
+mac.c
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/mac.c
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/Makefile.in
+END
+pnmshow24.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/pnmshow24.c
+END
+colourmaptest.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/colourmaptest.c
+END
+radon.h
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/radon.h
+END
+fontsel.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/fontsel.c
+END
+blooptest.c
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/blooptest.c
+END
+storepasswd.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/storepasswd.c
+END
+vncev.c
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/vncev.c
+END
+regiontest.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/regiontest.c
+END
+filetransfer.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/filetransfer.c
+END
+camera.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/camera.c
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/Makefile.am
+END
+backchannel.c
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/backchannel.c
+END
+simple.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/simple.c
+END
+rotatetemplate.c
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/rotatetemplate.c
+END
+example.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/example.c
+END
+pnmshow.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/examples/pnmshow.c
+END

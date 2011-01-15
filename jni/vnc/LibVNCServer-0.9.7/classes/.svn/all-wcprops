@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/classes
+END
+javaviewer.pseudo_proxy.patch
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/classes/javaviewer.pseudo_proxy.patch
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/classes/Makefile.in
+END
+VncViewer.jar
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/classes/VncViewer.jar
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/classes/Makefile.am
+END
+index.vnc
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/classes/index.vnc
+END

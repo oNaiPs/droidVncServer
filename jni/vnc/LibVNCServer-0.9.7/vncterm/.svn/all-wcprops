@@ -1,0 +1,71 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/Makefile.in
+END
+vga.h
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/vga.h
+END
+VNCommand.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/VNCommand.c
+END
+TODO
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/TODO
+END
+LinuxVNC.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/LinuxVNC.c
+END
+VNConsole.c
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/VNConsole.c
+END
+ChangeLog
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/ChangeLog
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/Makefile.am
+END
+VNConsole.h
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/VNConsole.h
+END
+example.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/example.c
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/2/trunk/LibVNCServer-0.9.7/vncterm/README
+END
