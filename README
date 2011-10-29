@@ -1,0 +1,15 @@
+NOTE: to compile the C daemon you must have a working AOSP source tree, and copy it to external folder.
+Do something like:
+
+$AOSP_SRC=/path/to/aosp
+$VNC_DAEMON=/path_to_vnc/droidvncdaemon
+
+cp -fr $VNC_DAEMON/droidvncdaemon $AOSP_SRC
+cd $AOSP_SRC
+. build/envsetup.sh
+# lunch
+mmm external/droidvncdaemon
+
+Thats it. You will have androidvncserver_froyo (for 2.2 down) and androidvncserver_ginger (for 2.3+) in $AOSP_SRC/out/target/product/generic/system/bin/
+
+I think this process is quite difficult, anyone knows how to build external packages outside AOSP tree?

@@ -1,33 +1,14 @@
-/*
- * Copyright (C) 2009 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */ 
+
 package org.onaips.vnc;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Timer;
@@ -35,127 +16,158 @@ import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.mobclix.android.sdk.Mobclix;
-
-
-
+import com.google.ads.AdRequest;
+import com.google.ads.AdView;
 
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.AlertDialog;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.ProgressDialog;
-import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
-import android.net.DhcpInfo;
-import android.net.LocalServerSocket;
-import android.net.LocalSocket;
 import android.net.NetworkInfo;
-import android.net.Uri; 
-import android.net.NetworkInfo.DetailedState;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.PowerManager;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.text.ClipboardManager;
 import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
 import android.view.View.OnClickListener;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.Animation.AnimationListener;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.mobclix.android.sdk.MobclixAdView;
-import com.mobclix.android.sdk.MobclixMMABannerXLAdView;
-import 	android.view.View;
 
 public class MainActivity extends Activity 
 {      
 	private static final int MENU_QUIT = 0;
 	private static final int MENU_HELP = 1;  
 	private static final int MENU_ONAIPS = 2;
-	private static final int MENU_SENDLOG = 3; 
-	private static final int MENU_CHANGELOG = 4;
-	private static final int APP_ID = 123;
-	private static final String changelog="- [Add] Clipboard text support!";
-	public static String SOCKET_ADDRESS = "org.onaips.vnc.localsocket";
+	private static final int MENU_SENDLOG = 3;
+	private static final int MENU_REVERSE_CONNECTION = 4;
 
+	static final int APP_ID = 123;
+	static final String VNC_LOG ="VNCserver";
 
-	private PowerManager.WakeLock wakeLock = null;
-	private Timer watchdogTimer=null;
+	private ServerManager s;
 
+	Animation buttonAnimation=null;
 	SharedPreferences preferences;
 	ProgressDialog dialog=null;
 	AlertDialog startDialog;
 
+	void doBindService() {
+		bindService(new Intent(this, ServerManager.class), mConnection,
+				Context.BIND_AUTO_CREATE);
+	}
 
-	@Override 
+	@Override
+	public void onResume()
+	{
+		IntentFilter i;
+		i = new IntentFilter("org.onaips.vnc.ACTIVITY_UPDATE");
+		ActivityUpdateReceiver receiver=new ActivityUpdateReceiver();
+		registerReceiver(receiver, i);
+
+		super.onResume();
+	}
+
+
+	public class ActivityUpdateReceiver extends BroadcastReceiver
+	{
+		@Override
+		public void onReceive(Context context, Intent intent)//this method receives broadcast messages. Be sure to modify AndroidManifest.xml file in order to enable message receiving
+		{
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+					setStateLabels(ServerManager.isServerRunning());		
+		}
+	}
+
+
+	private ServiceConnection mConnection = new ServiceConnection() {
+
+		public void onServiceConnected(ComponentName className, IBinder binder) {
+			s = ((ServerManager.MyBinder) binder).getService();
+		}
+
+		public void onServiceDisconnected(ComponentName className) {
+			s = null;
+		}
+	};
+
+	@Override  
 	protected void onDestroy()
 	{
 		super.onDestroy();
 		unregisterReceiver(mReceiver);
 	}
 
+	//rodar vnc com acc   
+
+
+
 
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
-		super.onCreate(savedInstanceState); 
+		super.onCreate(savedInstanceState);  
+
+		requestWindowFeature(Window.FEATURE_NO_TITLE); 
 
 		setContentView(R.layout.main);
 
+		doBindService();
 
 
 		// Initialize preferences
 		preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-		if (watchdogTimer!=null)
-			watchdogTimer.cancel();
-
-
-		checkForBusybox();
-
-
-
-		if (!hasRootPermission())
+		boolean root=preferences.getBoolean("asroot",true);
+		if (!hasRootPermission() && root)
 		{
-			startDialog.dismiss();
-
-			Log.v("VNC","You don't have root permissions...!!!");
+			log("You do not have root permissions...!!!");
 			startDialog = new AlertDialog.Builder(this).create();
 			startDialog.setTitle("Cannot continue");
-			startDialog.setMessage("You don't have root permissions.\nPlease root your phone first!\n\nDo you want to try out anyway?");
+			startDialog.setMessage("You do not have root permissions.\nPlease root your phone first!\n\nDo you want to continue anyway?");
 			startDialog.setIcon(R.drawable.icon);
-			startDialog.setButton("Yes", new DialogInterface.OnClickListener() {
 
-				@Override
+			startDialog.setButton("Yes", new DialogInterface.OnClickListener() {
 				public void onClick(DialogInterface arg0, int arg1) {
+					Editor e=preferences.edit();
+					e.putBoolean("asroot", false);
+					e.commit();
+
 					startDialog.dismiss();
 				}
 			});
 			startDialog.setButton2("No", new DialogInterface.OnClickListener() {
-
-				@Override
 				public void onClick(DialogInterface arg0, int arg1) {
 					System.exit(0);
 				}
@@ -164,93 +176,62 @@ public class MainActivity extends Activity
 		}
 
 		showInitialScreen(false);
-
+		setStateLabels(ServerManager.isServerRunning());
 
 		// register wifi event receiver
 		registerReceiver(mReceiver,  new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 
-		SocketListener s=new SocketListener();
-		s.start();
-
-
-		setStateLabels(isAndroidServerRunning());
-
 		boolean hidead=preferences.getBoolean("hidead", false);
-		if (hidead)
-			findViewById(R.id.banner_adview).setVisibility(View.INVISIBLE);
+		if (!hidead)
+		{
 
-		checkForBusybox();
-
+			// Look up the AdView as a resource and load a request.
+			AdView adView = (AdView)this.findViewById(R.id.adView);
+			adView.loadAd(new AdRequest());
+		} 
 
 		findViewById(R.id.Button01).setOnClickListener(new OnClickListener() {
-			@Override
 			public void onClick(View arg0) {
-				startServerButtonClicked();
+				final Button b=(Button)findViewById(R.id.Button01);
+				
+				buttonAnimation=AnimationUtils.loadAnimation(MainActivity.this, R.anim.animation);
+				buttonAnimation.setAnimationListener(new AnimationListener() {
+					public void onAnimationEnd(Animation animation) {
+						b.setEnabled(true);
+						//b.setVisibility(View.INVISIBLE);
+					}
+
+					public void onAnimationRepeat(Animation animation) {
+					}
+
+					public void onAnimationStart(Animation animation) {
+						b.setEnabled(false);
+
+						if (ServerManager.isServerRunning())
+							stopServer();
+						else
+							startServer();
+					}
+				});
+				b.startAnimation(buttonAnimation);
+
 				return;
 			}
 		}) ;
 		findViewById(R.id.Button02).setOnClickListener(new OnClickListener() {
-			@Override
 			public void onClick(View arg0) {
-				if (!isAndroidServerRunning())
-				{
-					showTextOnScreen("Server is not running");
-					return;
-				} 
-
-
-				prepareWatchdog("Stopping server. Please wait...","Couldn't Stop server",false);
-
-				Thread t=new Thread(){
-					public void run()
-					{
-						stopServer();
-					}
-				};
-				t.start();
-
+				restartServer();
 				return;
 			}
 		}); 
 	}
 
 
-	public boolean hasBusybox()
+	public void log(String s)
 	{
-		File busyboxFile=findExecutableOnPath("busybox");
-		return busyboxFile!=null;
+		Log.v(VNC_LOG,s);
 	}
 
-	public boolean checkForBusybox()
-	{
-		boolean has=hasBusybox();
-		if (!has)
-		{
-			Log.v("VNC","Busybox not found...!!!");
-			startDialog = new AlertDialog.Builder(this).create();
-			startDialog.setTitle("Cannot continue");
-			startDialog.setMessage("I didn't found busybox in your device, do you want to install it from the market?\nYou can try to run without it.\n(I am not responsible for this application)");
-			startDialog.setIcon(R.drawable.icon);
-			startDialog.setButton("Yes, install it", new DialogInterface.OnClickListener() {
-
-				@Override
-				public void onClick(DialogInterface arg0, int arg1) {
-					Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=stericson.busybox"));
-					startActivity(myIntent);
-				}
-			});
-			startDialog.setButton2("No, let me try without it", new DialogInterface.OnClickListener() {
-
-				@Override
-				public void onClick(DialogInterface arg0, int arg1) {
-					startDialog.dismiss();
-				}
-			});
-			startDialog.show();
-
-		}
-		return has;
-	}
 
 
 	public String packageVersion()
@@ -260,8 +241,7 @@ public class MainActivity extends Activity
 			PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
 			version = pi.versionName;     
 		} catch (NameNotFoundException e) {
-			// TODO Auto-generated catch block
-			Log.v("VNC","onOptionsItemSelected: "+ e.getMessage());
+			log("onOptionsItemSelected: "+ e.getMessage());
 		};
 		return version;
 	}
@@ -282,21 +262,19 @@ public class MainActivity extends Activity
 		editor.commit();
 
 		startDialog = new AlertDialog.Builder(this).create();
-		startDialog.setTitle("Version " + version);
-		startDialog.setMessage(Html.fromHtml(changelog));
+		startDialog.setTitle("droid VNC server");
+		startDialog.setMessage(Html.fromHtml("Welcome to droid VNC server version " + version + ".<br>This is beta software so please provide some feedback about your experience!<br><br>Best Regards, @oNaiPs"));
 		startDialog.setIcon(R.drawable.icon);
 
 
 		startDialog.setButton(AlertDialog.BUTTON1,"OK", new DialogInterface.OnClickListener() {
 
-			@Override
 			public void onClick(DialogInterface arg0, int arg1) {
 				startDialog.dismiss();			
 			}
 		});
 
 		startDialog.setButton2("Donate", new DialogInterface.OnClickListener() {
-			@Override
 			public void onClick(DialogInterface arg0, int arg1) {
 				Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=org.onaips.donate"));
 				startActivity(myIntent);
@@ -307,9 +285,6 @@ public class MainActivity extends Activity
 		startDialog.show();
 
 	}
-
-
-
 
 	public void showTextOnScreen(final String t)
 	{
@@ -325,50 +300,31 @@ public class MainActivity extends Activity
 		inflater.inflate(R.menu.menu, menu);
 
 		menu.add(0, MENU_SENDLOG  ,0,"Report issue");
-		menu.add(0, MENU_CHANGELOG,0,"Changelog");
 		menu.add(0, MENU_ONAIPS   ,0,"About");
 		menu.add(0, MENU_HELP     ,0, "Help");
+		menu.add(0, MENU_REVERSE_CONNECTION, 0, "Reverse\nConnection");
 		menu.add(0, MENU_QUIT     ,0, "Close");
 
+
 		return true; 
-	}
-
-	public void prepareWatchdog(final String s1,final String s2, final boolean running)
-	{
-		dialog=ProgressDialog.show(MainActivity.this, "",s1, true);
-
-		watchdogTimer=new Timer();
-		watchdogTimer.schedule(new TimerTask() {
-			@Override
-			public void run() {
-				runOnUiThread(new Runnable(){
-					public void run() {
-						if (isAndroidServerRunning() == (running==false))
-						{
-							try {
-								dialog.dismiss();	
-							}
-							catch(IllegalArgumentException a)
-							{
-								Log.v("VNC","IllegalArgumentException, should be avoided");
-							}
-							showTextOnScreen(s2);
-						}
-					}
-				});  
-			} 
-		}, (long)5000);
 	}
 
 
 	public void setStateLabels(boolean state)
 	{
+
+		
 		TextView stateLabel=(TextView)findViewById(R.id.stateLabel);
 		stateLabel.setText(state?"Running":"Stopped");
-		stateLabel.setTextColor(state?Color.GREEN:Color.RED);
+
+
+		stateLabel.setTextColor(state?Color.rgb(114,182,43):Color.rgb(234,113,29));
 
 		TextView t=(TextView)findViewById(R.id.TextView01);
-
+ 
+		Button b=(Button)findViewById(R.id.Button01);
+		b.clearAnimation();
+		Button b2=(Button)findViewById(R.id.Button02);
 		if (state)
 		{
 			String port=preferences.getString("port", "5901");
@@ -391,10 +347,16 @@ public class MainActivity extends Activity
 			else
 				t.setText(Html.fromHtml("<font align=\"center\">Connect to:<br>" + ip+":" + port + "<br>or<br>http://" + ip + ":" + httpport + "</font>"));	
 
+			b.setBackgroundDrawable(getResources().getDrawable(R.drawable.btnstop_normal));
+			b2.setVisibility(View.VISIBLE);
 
 		}
 		else
+		{
 			t.setText("");
+			b.setBackgroundDrawable(getResources().getDrawable(R.drawable.btnstart_normal));
+			b2.setVisibility(View.INVISIBLE);
+		}
 
 	}
 
@@ -410,130 +372,81 @@ public class MainActivity extends Activity
 				}
 			}
 		} catch (SocketException ex) {
-			Log.e("VNC", ex.toString());
+			log(ex.toString());
 		}
 		return "";
 	}
 
-
-	public void stopServer()
+	public void restartServer()
 	{
-		try{					
-			Process sh;
 
-			sh = Runtime.getRuntime().exec("su");
-			OutputStream os = sh.getOutputStream();
-
-
-			if (hasBusybox())
-			{
-				writeCommand(os, "busybox killall androidvncserver");
-				writeCommand(os, "busybox killall -KILL androidvncserver");	
-			}
-			else
-			{
-				writeCommand(os, "killall androidvncserver");
-				writeCommand(os, "killall -KILL androidvncserver");
-				if (findExecutableOnPath("killall")==null)
-				{
-					showTextOnScreen("I couldn't find the killall executable, please install busybox or i can't stop server");
-					Log.v("VNC","I couldn't find the killall executable, please install busybox or i can't stop server");
+		startDialog = new AlertDialog.Builder(this).create();
+		startDialog.setTitle("Already running");
+		startDialog.setMessage("Restart server?");
+		startDialog.setButton(AlertDialog.BUTTON1,"Yes", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface arg0, int arg1) {
+				stopServer();
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
 				}
+				startServer();
 			}
+		});
 
-			writeCommand(os, "exit");
+		startDialog.setButton2("No", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface arg0, int arg1) {
+			} 
+		});
+		startDialog.show();
 
-			os.flush();
-			os.close();
-
-			//lets clear notifications
-			String ns = Context.NOTIFICATION_SERVICE;
-			NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
-			mNotificationManager.cancel(APP_ID);
-		} catch (IOException e) {
-			showTextOnScreen("stopServer()" + e.getMessage());
-			Log.v("VNC","stopServer()" + e.getMessage());
-		} catch (Exception e) {
-			Log.v("VNC","stopServer()" + e.getMessage());
-		}	
-
-	} 
-
-	public void startServerButtonClicked()
-	{
-		if (isAndroidServerRunning())
-			showTextOnScreen("Server is already running, stop it first");
-		else
-		{
-			prepareWatchdog("Starting server. Please wait...","Couldn't Start server", true);
-
-			Thread t=new Thread(){
-				public void run()
-				{
-					startServer();
-				}
-			};
-			t.start();
-		}
 	}
 
 
 	public void startServer()
 	{
-		try{					
-			Process sh; 
+		s.startServer();
+		Timer t=new Timer();
+		t.schedule(new TimerTask() {
 
-			String password=preferences.getString("password", "");
-			String password_check="";
-			if (!password.equals(""))
-				password_check="-p " + password;
+			@Override
+			public void run() {
+				if (!ServerManager.isServerRunning())
+				{
+					runOnUiThread(new Runnable() {
 
-
-			String rotation=preferences.getString("rotation", "0");
-			rotation="-r " + rotation;
-
-			String scaling=preferences.getString("scale", "100");
-
-			String scaling_string="";
-			if (!scaling.equals("0"))
-				scaling_string="-s " + scaling;
-
-			String port=preferences.getString("port", "5901");
-
-			String tm=preferences.getString("testmode", "0");
-			String testmode="-t " + tm;
-			try
-			{
-				int port1=Integer.parseInt(port);
-				port=String.valueOf(port1);
+						public void run() {
+							showTextOnScreen("Could not start server :(");
+							log("Could not start server :(");
+							setStateLabels(ServerManager.isServerRunning());
+						}
+					});
+				} 
 			}
-			catch(NumberFormatException e)
-			{
-				port="5901";
-			}
-			String port_string="-P " + port;
-
-
-			sh = Runtime.getRuntime().exec("su");
-			OutputStream os = sh.getOutputStream();
-
-			writeCommand(os, "chmod 777 " + getFilesDir().getAbsolutePath() + "/androidvncserver");
-			writeCommand(os,getFilesDir().getAbsolutePath() + "/androidvncserver "+ password_check + " " + rotation + " " + scaling_string + " " + port_string +" " +  testmode);
-
-			//dont show password on logcat
-			Log.v("VNC","Starting " + getFilesDir().getAbsolutePath() + "/androidvncserver " + " " + rotation + " " + scaling_string + " " + port_string + " " + testmode);
-
-
-		} catch (IOException e) {
-			Log.v("VNC","startServer():" + e.getMessage());
-			showTextOnScreen("startServer():" + e.getMessage());
-		} catch (Exception e) {
-			Log.v("VNC","startServer():" + e.getMessage());
-			showTextOnScreen("startServer():" + e.getMessage());
-		}	
-
+		},2000);
 	}
+	public void stopServer()
+	{
+		s.killServer();
+		Timer t=new Timer();
+		t.schedule(new TimerTask() {
 
+			@Override
+			public void run() {
+				if (ServerManager.isServerRunning())
+				{
+					runOnUiThread(new Runnable() {
+
+						public void run() {
+							showTextOnScreen("Could not stop server :(");
+							log("Could not stop server :(");
+							setStateLabels(ServerManager.isServerRunning());							
+						}
+					});
+				}
+			}
+		},4000);
+	}
 
 	public void showHelp()
 	{
@@ -541,17 +454,17 @@ public class MainActivity extends Activity
 		.setTitle("Help")
 		.setMessage(Html.fromHtml("Mouse Mappings:<br><br>Right Click -> Back<br>Middle Click -> End Call<br>Left Click -> Touch<br><br>Keyboard Mappings<br><br>" +
 				"Home Key -> Home<br>Escape -> Back<br>Page Up ->Menu<br>Left Ctrl -> Search<br>PgDown -> Start Call<br>" +
-		"End Key -> End Call<br>F4 -> Rotate<br>F11 -> Disconnect Server<br>F12 -> Stop Server Daemon"))
+		"End Key -> End Call<br>F4 -> Rotate<br>F11 -> Disconnect<br>F12 -> Stop Server Daemon"))
 		.setPositiveButton("Quit", null)
 		.setNegativeButton("Open Website", new DialogInterface.OnClickListener() {
-			@Override
 			public void onClick(DialogInterface arg0, int arg1) {
-				Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://onaips.blogspot.com"));
+				Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.onaips.com"));
 				startActivity(myIntent);
 			}
 		})
 		.show();
 	}
+
 
 	// This method is called once the menu is selected
 	public boolean onOptionsItemSelected(MenuItem item) {
@@ -565,14 +478,33 @@ public class MainActivity extends Activity
 			showTextOnScreen("Don't forget to stop/start the server after changes");
 
 			break; 
-		case MENU_CHANGELOG:
-			showInitialScreen(true);
-			break;
 		case MENU_QUIT:
 			System.exit(1);
 			break;
 		case MENU_HELP:
 			showHelp();
+			break;
+		case MENU_REVERSE_CONNECTION:
+			if (ServerManager.isServerRunning())
+			{
+				startDialog = new AlertDialog.Builder(this).create();
+				startDialog.setTitle("Already running");
+				startDialog.setMessage("Restart server?");
+				startDialog.setButton(AlertDialog.BUTTON1,"Yes", new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface arg0, int arg1) {
+						startReverseConnection();
+					}
+				});
+
+				startDialog.setButton2("Cancel", new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface arg0, int arg1) {
+					} 
+				});
+				startDialog.show();
+			}
+			else
+				startReverseConnection();
+
 			break;
 		case MENU_SENDLOG:
 			collectAndSendLog();
@@ -581,65 +513,51 @@ public class MainActivity extends Activity
 
 			new AlertDialog.Builder(this)
 			.setTitle("About")
-			.setMessage(Html.fromHtml("version " + packageVersion() + "<br><br>developed by oNaiPs<br><br>Graphics: Sandro Forbice (@sandroforbice)<br><br>Open-Source Software"))
+			.setMessage(Html.fromHtml("version " + packageVersion() + "<br><br>Code: @oNaiPs<br><br>Graphics: ricardomendes.net"))
 			.setPositiveButton("Close", null)
 			.setNegativeButton("Open Website", new DialogInterface.OnClickListener() {
-				@Override
 				public void onClick(DialogInterface arg0, int arg1) {
-					Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://onaips.blogspot.com"));
+					Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://onaips.com"));
 					startActivity(myIntent);
 
 				}
 			})
 			.show();
+			break;
+
 		} 
-		return true;
+		return true;  
 	}
 
-	public boolean isAndroidServerRunning()
+	public void startReverseConnection()
 	{
-		String result="";
-		Process sh;
-		try {
-			/*if (hasExecutable("ps"))
-				sh = Runtime.getRuntime().exec("ps");
-			else*/
-			if (hasBusybox())
-			{
-				sh = Runtime.getRuntime().exec("busybox ps w");
+
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+
+		alert.setTitle("Reverse Connection");
+		alert.setMessage("Input <host:port>:");
+
+		// Set an EditText view to get user input 
+		final EditText input = new EditText(this);
+
+		alert.setView(input);
+
+		alert.setPositiveButton("Start server", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				s.startReverseConnection(input.getText().toString());
 			}
-			else
-			{
-				if (findExecutableOnPath("ps")==null)
-					showTextOnScreen("I cant find the ps executable, please install busybox or i'm wont be able to check server state");
-				sh = Runtime.getRuntime().exec("ps");
+		});
+
+		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				// Canceled.
 			}
+		});
 
-			InputStream is=sh.getInputStream();
-			InputStreamReader isr = new InputStreamReader(is);
-			BufferedReader br = new BufferedReader(isr);
-			String line;
-
-			while ((line  = br.readLine()) != null) {
-				result+=line;
-				if (result.indexOf("androidvncserver")>0)
-				{
-					Log.v("VNC","isAndroidServerRunning? yes");
-					return true;
-				}
-			} 
-
-		}  catch (Exception e) {
-			Log.v("VNC"," isAndroidServerRunning():" + e.getMessage());
-		}
-
-		Log.v("VNC","isAndroidServerRunning? no");
-		return false;
+		alert.show();
 	}
 
-
-
-	public boolean hasRootPermission() {
+	public static boolean hasRootPermission() {
 		boolean rooted = true;
 		try {
 			File su = new File("/system/bin/su");
@@ -650,22 +568,22 @@ public class MainActivity extends Activity
 				}
 			}
 		} catch (Exception e) {
-			Log.v("VNC", "Can't obtain root - Here is what I know: "+e.getMessage());
+			//log( "Can't obtain root - Here is what I know: "+e.getMessage());
 			rooted = false;
 		}
 
 		return rooted;
 	}
 
-	public static final String LOG_COLLECTOR_PACKAGE_NAME = "com.xtralogic.android.logcollector";//$NON-NLS-1$
-	public static final String ACTION_SEND_LOG = "com.xtralogic.logcollector.intent.action.SEND_LOG";//$NON-NLS-1$
-	public static final String EXTRA_SEND_INTENT_ACTION = "com.xtralogic.logcollector.intent.extra.SEND_INTENT_ACTION";//$NON-NLS-1$
-	public static final String EXTRA_DATA = "com.xtralogic.logcollector.intent.extra.DATA";//$NON-NLS-1$
-	public static final String EXTRA_ADDITIONAL_INFO = "com.xtralogic.logcollector.intent.extra.ADDITIONAL_INFO";//$NON-NLS-1$
-	public static final String EXTRA_SHOW_UI = "com.xtralogic.logcollector.intent.extra.SHOW_UI";//$NON-NLS-1$
-	public static final String EXTRA_FILTER_SPECS = "com.xtralogic.logcollector.intent.extra.FILTER_SPECS";//$NON-NLS-1$
-	public static final String EXTRA_FORMAT = "com.xtralogic.logcollector.intent.extra.FORMAT";//$NON-NLS-1$
-	public static final String EXTRA_BUFFER = "com.xtralogic.logcollector.intent.extra.BUFFER";//$NON-NLS-1$
+	public static final String LOG_COLLECTOR_PACKAGE_NAME = "com.xtralogic.android.logcollector";
+	public static final String ACTION_SEND_LOG = "com.xtralogic.logcollector.intent.action.SEND_LOG";
+	public static final String EXTRA_SEND_INTENT_ACTION = "com.xtralogic.logcollector.intent.extra.SEND_INTENT_ACTION";
+	public static final String EXTRA_DATA = "com.xtralogic.logcollector.intent.extra.DATA";
+	public static final String EXTRA_ADDITIONAL_INFO = "com.xtralogic.logcollector.intent.extra.ADDITIONAL_INFO";
+	public static final String EXTRA_SHOW_UI = "com.xtralogic.logcollector.intent.extra.SHOW_UI";
+	public static final String EXTRA_FILTER_SPECS = "com.xtralogic.logcollector.intent.extra.FILTER_SPECS";
+	public static final String EXTRA_FORMAT = "com.xtralogic.logcollector.intent.extra.FORMAT";
+	public static final String EXTRA_BUFFER = "com.xtralogic.logcollector.intent.extra.BUFFER";
 
 	void collectAndSendLog(){
 		final PackageManager packageManager = getPackageManager();
@@ -705,9 +623,9 @@ public class MainActivity extends Activity
 
 					//The log can be filtered to contain data relevant only to your app
 					String[] filterSpecs = new String[4];
-					filterSpecs[0] = "VNC:I";
-					filterSpecs[1] = "VNC:D";
-					filterSpecs[2] = "VNC:V";
+					filterSpecs[0] = VNC_LOG + ":I";
+					filterSpecs[1] = VNC_LOG + ":D";
+					filterSpecs[2] = VNC_LOG + ":V";
 					filterSpecs[3] = "*:S";
 					intent.putExtra(EXTRA_FILTER_SPECS, filterSpecs);
 
@@ -745,10 +663,10 @@ public class MainActivity extends Activity
 			Matcher m = p.matcher(procVersionStr);
 
 			if (!m.matches()) {
-				Log.e("VNC", "Regex did not match on /proc/version: " + procVersionStr);
+				log("Regex did not match on /proc/version: " + procVersionStr);
 				return "Unavailable";
 			} else if (m.groupCount() < 4) {
-				Log.e("VNC", "Regex match on /proc/version only returned " + m.groupCount()
+				log("Regex match on /proc/version only returned " + m.groupCount()
 						+ " groups");
 				return "Unavailable";
 			} else {
@@ -757,7 +675,7 @@ public class MainActivity extends Activity
 						.append(m.group(4))).toString();
 			}
 		} catch (IOException e) {  
-			Log.e("VNC", "IO Exception when getting kernel version for Device Info screen", e);
+			log("IO Exception when getting kernel version for Device Info screen"+ e.getMessage() );
 
 			return "Unavailable";
 		}
@@ -786,104 +704,17 @@ public class MainActivity extends Activity
 		@Override public void onReceive(Context context, Intent intent) {
 			NetworkInfo info = intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
 			if (info.getType() == ConnectivityManager.TYPE_MOBILE || info.getType()==ConnectivityManager.TYPE_WIFI) {
-				setStateLabels(isAndroidServerRunning());
-			} 
+				setStateLabels(ServerManager.isServerRunning());
+
+			}  
 		}
 	};
 
 
-	public void showClientConnected(String c)
-	{
-		String ns = Context.NOTIFICATION_SERVICE;
-		NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
 
-		int icon = R.drawable.icon;
-		CharSequence tickerText = c + " connected to VNC server";
-		long when = System.currentTimeMillis();
-
-
-		Notification notification = new Notification(icon, tickerText, when);
-
-		Context context = getApplicationContext();
-		CharSequence contentTitle = "Droid VNC Server";
-		CharSequence contentText = "Client Connected from " + c;
-		Intent notificationIntent = new Intent();
-		PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, 0);
-
-		notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
-
-		mNotificationManager.notify(APP_ID, notification);
-
-		//lets see if we should keep screen on 
-		if (preferences.getBoolean("screenturnoff", false))
-		{
-			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-			wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,"VNC");
-			wakeLock.acquire();	
-		}
-	}
-
-	void showClientDisconnected()
-	{
-		String ns = Context.NOTIFICATION_SERVICE;
-		NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
-		mNotificationManager.cancel(APP_ID);
-
-		if (wakeLock!=null && wakeLock.isHeld())
-			wakeLock.release();
-	}
-
-
-	class SocketListener extends Thread {
-		@Override
-		public void run() {
-			try {
-				LocalServerSocket server = new LocalServerSocket(SOCKET_ADDRESS);
-				while (true) {	
-					LocalSocket receiver = server.accept();
-					if (receiver != null) {
-						InputStream input = receiver.getInputStream();
-
-						int readed = input.read();
-
-						StringBuffer bytes=new StringBuffer(2048);
-						while (readed != -1) {
-							bytes.append((char) readed);
-							readed = input.read();
-						}
-						//showTextOnScreen(bytes.toString());
-						Log.v("VNC",bytes.substring(0, 6));
-
-
-						if (bytes.substring(0, 6).equals("~CLIP|"))
-						{
-							bytes.delete(0, 6);  
-							ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE); 
-
-							clipboard.setText(bytes.toString());
-						}
-						else if (preferences.getBoolean("notifyclient", true))
-						{
-							if (bytes.substring(0, 11).equals("~CONNECTED|"))
-							{
-								bytes.delete(0, 11);
-								showClientConnected(bytes.toString());
-							}
-							else if (bytes.substring(0, 14).equals("~DISCONNECTED|"))
-							{
-								showClientDisconnected();
-							}
-						}
-					}
-				}
-			} catch (IOException e) {
-				Log.e(getClass().getName(), e.getMessage());
-			}
-		}
-	}
-
-	private static File findExecutableOnPath(String executableName)  
+	static File findExecutableOnPath(String executableName)  
 	{  
+
 		String systemPath = System.getenv("PATH");  
 		String[] pathDirs = systemPath.split(File.pathSeparator);  
 
@@ -898,5 +729,7 @@ public class MainActivity extends Activity
 			}  
 		}  
 		return fullyQualifiedExecutable;  
-	}  
+	}
+
+
 }

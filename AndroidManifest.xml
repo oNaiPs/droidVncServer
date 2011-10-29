@@ -1,47 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	package="org.onaips.vnc" android:versionName="0.991" android:versionCode="52">
-	<uses-sdk android:minSdkVersion="3" />
-	<application android:debuggable="false" android:icon="@drawable/icon"
-		android:label="droid VNC server" android:name="MainApplication">
-		<activity android:name=".MainActivity" android:label="@string/app_name"
-			android:icon="@drawable/icon" android:launchMode="singleInstance">
+	package="org.onaips.vnc" android:versionCode="56" android:versionName="1.0a3">
+	<uses-sdk android:minSdkVersion="5"/>
+	
+	<uses-permission android:name="android.permission.WRITE_SETTINGS"></uses-permission>
+
+	<application android:label="droid VNC server" android:icon="@drawable/icon"
+		android:name="MainApplication" android:debuggable="true">
+		<activity android:name=".MainActivity" android:launchMode="singleInstance"
+			android:label="@string/app_name" android:icon="@drawable/icon">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 				<category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="org.onaips.vnc.ACTIVITY_UPDATE" />
 
-			</intent-filter>  
+			</intent-filter> 
 		</activity>
 		<activity android:name="preferences" android:label="Preferences"></activity>
+		<activity android:name="com.google.ads.AdActivity"
+			android:configChanges="keyboard|keyboardHidden|orientation" />
 
-		<meta-data android:name="com.mobclix.APPLICATION_ID"
-			android:value="1F34160B-63BB-4854-BDB7-D46B7EADBF06" />
-		<activity android:name="com.mobclix.android.sdk.MobclixBrowserActivity" />
-
-
-
-		<service android:name="StartAtBootService">
+		<service android:name=".ServerManager">  
 			<intent-filter>
-				<action android:name="org.onaips.vnc.StartAtBootService"></action>
+				<action android:name="org.onaips.vnc.ServerManager"></action> 
 			</intent-filter>
 		</service>
-		
-		<receiver android:name="StartAtBootServiceReceiver">
-			<intent-filter>
-				<action android:name="android.intent.action.BOOT_COMPLETED">
-				</action>
-				<category android:name="android.intent.category.HOME">
-				</category>
-			</intent-filter>
-		</receiver>
-		
-	<service android:name="avncservice"></service>
-</application>
 
+
+		<receiver android:name=".StartServiceAtBootReceiver">
+			<intent-filter>
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+				<category android:name="android.intent.category.HOME" />
+			</intent-filter>
+		</receiver> 
+
+		<service android:name="avncservice"></service>
+	</application><uses-permission android:name="android.permission.READ_FRAME_BUFFER"></uses-permission>
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
 	<uses-permission android:name="android.permission.ACCESS_SUPERUSER"></uses-permission>
 	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
-		<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
 	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
 	<uses-permission android:name="android.permission.GET_TASKS"></uses-permission>
 	<uses-permission android:name="android.permission.READ_PHONE_STATE"></uses-permission>

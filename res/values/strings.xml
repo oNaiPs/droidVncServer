@@ -27,12 +27,19 @@
 <item>30</item>
 <item>20</item>
 </string-array>
-<string-array name="test_mode_strings">
-<item>0</item>
-<item>1</item>
-<item>2</item>
-<item>3</item>
-<item>4</item>
+<string-array name="display_mode_strings">
+<item>Auto-detect</item>
+<item>Framebuffer</item>
+<item>Gralloc (Tegra2)</item>
+<item>ADB</item>
+<item>Gingerbread</item>
+</string-array>
+<string-array name="display_mode_values">
+<item>auto</item> 
+<item>fb</item> 
+<item>gralloc</item>
+<item>adb</item>
+<item>gingerbread</item>
 </string-array>
 <string-array name="sleep_strings">
 <item>On</item>

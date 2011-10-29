@@ -6,12 +6,12 @@
 <ListPreference android:defaultValue="100" android:key="scale" android:title="Scale Screen" android:entries="@array/scale_strings" android:entryValues="@array/scale_values" android:summary="Only 100 and 50 working for now"></ListPreference>
 
 <EditTextPreference android:inputType="number" android:defaultValue="5901" android:key="port" android:title="VNC port" android:summary="Note: It will not show error if cannot bind port"></EditTextPreference>
-
+<ListPreference android:title="Display Access Method" android:summary="Change if you are experiencing display issues" android:key="displaymode" android:defaultValue="auto" android:entries="@array/display_mode_strings" android:entryValues="@array/display_mode_values"></ListPreference>
 <CheckBoxPreference android:summaryOn="Warning! Just activate if you have your daemon running fine." android:title="Start server on boot" android:defaultValue="false" android:summaryOff="Warning! Just activate if you have your daemon running fine." android:key="startdaemononboot"></CheckBoxPreference>
-<CheckBoxPreference android:key="screenturnoff" android:title="Don't let screen turn off" android:defaultValue="false"></CheckBoxPreference>
-<CheckBoxPreference android:key="notifyclient" android:title="Notify when client connects" android:summary="Show notification on status bar" android:defaultValue="true"></CheckBoxPreference>
+<CheckBoxPreference android:key="screenturnoff" android:title="Don't Let Screen Turn off" android:defaultValue="false"></CheckBoxPreference>
+<CheckBoxPreference android:key="notifyclient" android:title="Notify When Client Connects" android:summary="Show notification on status bar" android:defaultValue="true"></CheckBoxPreference>
+<CheckBoxPreference android:key="asroot" android:defaultValue="true" android:title="Execute server as root" android:summary="Unselect this if you do not want to run the server as root."></CheckBoxPreference>
 <CheckBoxPreference android:key="hidead" android:defaultValue="false" android:title="Disable Bottom Ad" android:summary="Select this if you don't want to view the ad."></CheckBoxPreference>
 
-<ListPreference android:title="Screen Test Mode" android:summary="DANGEROUS: enable this to fix screen issues" android:key="testmode" android:entries="@array/test_mode_strings" android:entryValues="@array/test_mode_strings"></ListPreference>
 </PreferenceScreen>
  

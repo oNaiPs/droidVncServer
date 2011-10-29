@@ -1,0 +1,10 @@
+v1.0a
+
+- Rotation now fully working (on demand with F4 key)
+- Speed improvements and bug fixes
+- Improved server state detection (using IPC)
+- changed to LibVNCServer from kanaka repository
+- New webserver vnc client (noVNC), uses javascript
+- Ability to make a reverse connection
+- Two new framebuffer access methods (gingerbread and adb)
+- New minimalistic interface

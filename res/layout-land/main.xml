@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:ads="http://schemas.android.com/apk/lib/com.google.ads"
+  android:layout_height="fill_parent" android:orientation="vertical"
+  android:background="@drawable/bg" android:layout_width="match_parent" android:gravity="bottom">
+  
+<LinearLayout
+  android:layout_width="fill_parent"
+  android:orientation="horizontal" android:layout_centerHorizontal="true"
+   android:layout_height="match_parent" 
+   android:layout_centerVertical="true" android:id="@+id/layout1">
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent" android:id="@+id/linearLayout1" android:orientation="vertical" android:weightSum="1">
+        <ImageView android:layout_width="260dp" android:src="@drawable/droidvnclogo" android:layout_weight="0.01" android:layout_height="wrap_content"></ImageView>
+        <TextView android:id="@+id/stateLabel" android:layout_height="wrap_content" android:text="@+id/TextView01" android:textSize="30sp" android:paddingTop="10dp" android:typeface="sans" android:layout_gravity="center_horizontal" android:layout_width="wrap_content"></TextView>
+        <TextView android:layout_width="wrap_content" android:gravity="center" android:shadowRadius="0.5" android:id="@+id/TextView01" android:layout_height="wrap_content" android:text="@+id/TextView02" android:shadowDy="1.0" android:shadowColor="#111" android:textSize="15sp" android:paddingTop="10dp" android:typeface="sans" android:layout_gravity="center_horizontal"></TextView>
+    </LinearLayout>
+    <RelativeLayout android:id="@+id/relativeLayout1" android:layout_height="177dp" android:layout_gravity="center" android:layout_width="match_parent">
+        <Button android:background="@drawable/btnstart" android:layout_width="150dp" android:layout_centerInParent="true" android:id="@+id/Button01" android:layout_height="150dp"></Button>
+        <Button android:layout_alignParentBottom="true" android:background="@drawable/restart_normal" android:id="@+id/Button02" android:layout_toRightOf="@id/Button01" android:layout_height="30dp" android:layout_width="30dp"></Button>
+    </RelativeLayout> 
+ 
+</LinearLayout>
+
+<com.google.ads.AdView android:id="@+id/adView"
+                       android:layout_width="wrap_content"
+                       android:layout_height="wrap_content"
+                       android:layout_alignParentBottom="true"
+                       android:layout_centerHorizontal="true"
+                       ads:adUnitId="a14c45a1d8a1817"
+                       ads:adSize="BANNER"/> 
+</RelativeLayout>    

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+    <!-- 
+    noVNC example: simple example using default UI
+    Copyright (C) 2011 Joel Martin
+    Licensed under LGPL-3 (see LICENSE.txt)
+    -->
+    <head>
+        <title>droid VNC server</title>
+        <meta http-equiv="X-UA-Compatible" content="chrome=1">
+        <link rel="stylesheet" href="plain.css">
+        <link rel="alternate stylesheet" href="black.css" TITLE="Black">
+        <!--
+        <script type='text/javascript' 
+            src='http://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js'></script>
+        -->
+        <script src="vnc.js"></script>
+        <script src="ui.js.vnc"></script>
+    </head>
+
+    <body>
+        <div id='vnc'>Loading</div>
+
+        <script>
+        window.onload = function () {
+            UI.load('vnc');
+        };
+        </script>
+
+    <A id="java" href="./index.vnc">Java version (older)</A></br>
+    <A id="troubleshooting" href="https://github.com/kanaka/noVNC/wiki/Browser-support">Not working? Click here</A>
+    </body>
+
+</html>

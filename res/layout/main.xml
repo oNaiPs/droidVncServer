@@ -1,68 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
   xmlns:android="http://schemas.android.com/apk/res/android"
-  android:layout_width="fill_parent"
+  xmlns:ads="http://schemas.android.com/apk/lib/com.google.ads"
   android:layout_height="fill_parent" android:orientation="vertical"
-  android:background="@drawable/bg"
-  >
+  android:background="@drawable/bg" android:layout_width="match_parent" android:gravity="top">
   
 <LinearLayout
   android:layout_width="fill_parent"
   android:layout_height="fill_parent" 
   android:orientation="vertical"
-  android:gravity="center_horizontal"
+  android:gravity="center_horizontal" 
   >
 
     <ImageView  
 		android:layout_marginTop="24dp" 
         android:layout_width="wrap_content" 
         android:layout_height="wrap_content" 
-        android:scaleType="center"
-        android:src="@drawable/droidvnclogo" />
-
-<Button android:textSize="30sp" android:id="@+id/Button01" android:layout_height="wrap_content" android:text="Start Server"
-		android:layout_width="wrap_content"
-		android:layout_marginTop="24dp"
-		android:background="@drawable/btnstart"
-		android:textColor="#fff"
-		android:shadowDy="1.0"
-		android:shadowRadius="0.5"
-		android:shadowColor="#111"
-		>
-</Button>
-<Button android:textSize="30sp" android:id="@+id/Button02" android:layout_height="wrap_content" android:text="Stop Server"
-		android:layout_width="wrap_content"
-		android:layout_marginTop="10dp"
-		android:background="@drawable/btnstop"
-		android:textColor="#fff"
-		android:shadowDy="1.0"
-		android:shadowRadius="0.5"
-		android:shadowColor="#111"
-		>
-</Button> 
-
-
-<TextView android:textSize="30sp" android:text="@+id/TextView01" android:id="@+id/stateLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingTop="10dp"
-		android:shadowDy="1.0"
-		android:shadowRadius="0.5"
-		android:shadowColor="#111">
-</TextView>
-<TextView android:textSize="15sp" android:text="@+id/TextView02" android:id="@+id/TextView01" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingTop="10dp"
-		android:shadowDy="1.0"
-		android:shadowRadius="0.5"
-		android:shadowColor="#111"
-		android:gravity="center"
->
-</TextView> 
+        android:src="@drawable/droidvnclogo" android:scaleType="fitStart"/>
+    <RelativeLayout android:layout_width="match_parent" android:layout_marginTop="10dp" 
+    android:id="@+id/relativeLayout1" android:layout_height="200dp">
+        <Button android:background="@drawable/btnstart" android:id="@+id/Button01" 
+        android:layout_width="200dp" android:layout_height="200dp" 
+        android:layout_centerHorizontal="true"></Button>
+        <Button android:layout_alignParentBottom="true" android:background="@drawable/restart_normal"
+        android:id="@+id/Button02" android:layout_toRightOf="@id/Button01"
+        android:layout_width="30dp" android:layout_height="30dp"></Button>
+    </RelativeLayout>
+    <TextView android:shadowRadius="0.5" android:id="@+id/stateLabel" android:layout_width="wrap_content" android:text="@+id/TextView01" android:shadowDy="1.0" android:shadowColor="#111" android:textSize="30sp" android:layout_height="wrap_content" android:paddingTop="10dp"></TextView>
+    <TextView android:gravity="center" android:shadowRadius="0.5" android:id="@+id/TextView01" android:layout_width="wrap_content" android:text="@+id/TextView02" android:shadowDy="1.0" android:shadowColor="#111" android:textSize="15sp" android:layout_height="wrap_content" android:paddingTop="10dp"></TextView> 
  
 </LinearLayout>
-   
- 
-<com.mobclix.android.sdk.MobclixMMABannerXLAdView
-android:id="@+id/banner_adview"
-android:layout_height="50dip"
-android:layout_width="320dip"
-android:layout_gravity="bottom"
-android:layout_alignParentBottom="true"
-/> 
+<com.google.ads.AdView android:id="@+id/adView"
+                       android:layout_width="wrap_content"
+                       android:layout_height="wrap_content"
+                       android:layout_alignParentBottom="true"
+                       ads:adUnitId="a14c45a1d8a1817"
+                       ads:adSize="BANNER"/>
+                       
+
 </RelativeLayout>    
