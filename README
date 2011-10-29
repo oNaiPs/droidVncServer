@@ -1,3 +1,13 @@
+the Droid VNC server projects consists in two parts: the daemon and GUI.
+
+
+GUI handles general user input, and connects to the daemon using local IPC. You can compile it using Eclipse or Ant (not tested for long time).
+
+If you wish to contribute to the project, just fork it and commit some interesting features...
+
+
+
+-------------- Compile C daemon -------------------
 NOTE: to compile the C daemon you must have a working AOSP source tree, and copy it to external folder.
 Do something like:
 
