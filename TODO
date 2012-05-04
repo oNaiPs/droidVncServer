@@ -1,4 +1,5 @@
-reverse connection (doable) 
-busybox independent
-unix sockets start/stop management
-2.0 and up only
+- change tcp socket to unix socket
+- click on address field will iterate show interface addresses
+- map volume keys
+- custom key mapping
+- add MIPS and X86 to APP_ABI (and more)
