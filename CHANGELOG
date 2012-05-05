@@ -1,3 +1,8 @@
+
+- Changed to official libvncserver 0.9- Changed to official libvncserver 0.99
+- Decoupled native screen grabber from jni sources, you wont need to have AOSP anymore
+
+
 v1.0a
 
 - Rotation now fully working (on demand with F4 key)
