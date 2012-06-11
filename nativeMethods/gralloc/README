@@ -1,0 +1,4 @@
+-This method should work for tegra2 devices which not use the linux framebuffer.
+- Make sure you have the tegra read() patch applied on your sources.
+
+http://nv-tegra.nvidia.com/gitweb/?p=android/platform/hardware/libhardware.git;a=commit;h=9e00d0630e6fd8503602389b18f13a8b220728b1
