@@ -1,22 +1,33 @@
-The droid-VNC-server projects consists in two parts: the daemon and GUI.
+The droid-VNC-server projects consists in three main modules parts: the daemon, wrapper libs and the GUI.
 
-GUI handles general user input, and connects to the daemon using local IPC. You can compile it using Eclipse or Ant (the latter not tested though).
+- Daemon -
+Provides the vnc server functionality, injects input/touch events, clipboard management, etc
+Available in jni/ folder
 
-If you wish to contribute to the project, just fork it and commit some interesting features...
+- Wrapper libs -
+Compiled against the AOSP so everyone can build the daemon/GUI without having to fetch +2GB files.
+Currently there are 2 wrappers, gralloc and flinger.
 
--------------- Compile C daemon -------------------
-NOTE: to compile the C daemon you must have a working AOSP source tree, and copy it to external folder.
-Do something like:
+Available in nativeMethods/ folder, and precompiled libs in nativeMethods/lib/
 
-$AOSP_SRC=/path/to/aosp
-$VNC_DAEMON=/path_to_vnc/droidvncdaemon
+- GUI - 
+GUI handles user-friendly control.
+Connects to the daemon using local IPC.
 
-cp -fr $VNC_DAEMON/droidvncdaemon $AOSP_SRC
-cd $AOSP_SRC
-. build/envsetup.sh
-# lunch
-mmm external/droidvncdaemon
+-------------- Compile C daemon ---------------------
+On project folder:
+  $ ndk-build
+  $ cp libs/armeabi/androidvncserver /res/raw
 
-Thats it. You will have androidvncserver_froyo (for 2.2 down) and androidvncserver_ginger (for 2.3+) in $AOSP_SRC/out/target/product/generic/system/bin/
+-------------- Compile Wrapper libs -----------------
+  $ cd <aosp_folder>
+  $ . build/envsetup.sh
+  $ lunch
+  $ ln -s <droid-vnc-folder>/nativeMethods/ external/
 
-I think this process is quite difficult, anyone knows how to build external packages outside AOSP tree?
+To build:
+  $ mm external/nativeMethods
+
+
+-------------- Compile GUI------- -------------------
+Import using eclipse as a regular Android project
