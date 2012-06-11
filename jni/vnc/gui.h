@@ -22,7 +22,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "common.h"
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <pthread.h>
 
+#define DEFAULT_IPC_RECV_PORT 13131
+#define DEFAULT_IPC_SEND_PORT 13132
+#define SOCK_PATH  "org.onaips.vnc.gui" //TODO put IPC working on unix sockets
 
 int sendMsgToGui(char *msg);
 

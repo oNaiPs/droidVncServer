@@ -17,11 +17,14 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef ADB_CONNECT_METHOD
-#define ADB_CONNECT_METHOD
+#ifndef _GRALLOC_H
+#define _GRALLOC_H
 
-int initADB(void);
-unsigned int *readBufferADB(void);
-void closeADB(void);
+#include "screenFormat.h"
+
+int initGralloc(void);
+void closeGralloc(void);
+unsigned char *readBufferGralloc(void);
+screenFormat getScreenFormatGralloc(void);
 
 #endif

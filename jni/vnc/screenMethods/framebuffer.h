@@ -22,15 +22,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "common.h"
 
-unsigned int *fbmmap;
-
-struct fb_var_screeninfo scrinfo;
-struct fb_fix_screeninfo fscrinfo;
-
-int initFramebuffer(void);
-void cleanupFramebuffer(void);
-void update_fb_info();    
-int roundUpToPageSize(int x);
-void setFramebufferDevice(char *);
+int initFB(void);
+void closeFB(void);
+unsigned int *readBufferFB(void);
+void FB_setDevice(char *);
+struct fb_var_screeninfo FB_getscrinfo(void);
 
 #endif

@@ -22,9 +22,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "common.h"
 #include "gui.h"
+
+#include "rfb/rfb.h"
+#include "suinput.h"
+
 #define BUS_VIRTUAL 0x06
-
-
 
 void initInput();
 int keysym2scancode(rfbBool down, rfbKeySym c, rfbClientPtr cl, int *sh, int *alt);

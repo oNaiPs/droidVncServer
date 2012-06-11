@@ -34,7 +34,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
-
 #include "common.h"
 
 #define A_CNXN 0x4e584e43
@@ -43,6 +42,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define A_WRTE 0x45545257
 
 #define DDMS_RAWIMAGE_VERSION 1
+
+#define DDMS_RAWIMAGE_VERSION 1
+
+struct _message {
+    unsigned int command;       /* command identifier constant      */
+    unsigned int arg0;          /* first argument                   */
+    unsigned int arg1;          /* second argument                  */
+    unsigned int data_length;   /* length of payload (0 is allowed) */
+    unsigned int data_crc32;    /* crc32 of data payload            */
+    unsigned int magic;         /* command ^ 0xffffffff             */
+} __attribute__((packed));
 
 char connect_string[] = {
   0x43, 0x4e, 0x58, 0x4e, 0x00, 0x00, 0x00, 0x01, 
@@ -62,6 +72,8 @@ char okay_string[24];
 struct fbinfo *fb_info;
 struct _message *message,*okay_message;
 int sockfd;
+
+unsigned int *adbbuf = NULL;
 
 ssize_t write_socket(int fd, const void *buf, size_t count)
 {
@@ -88,7 +100,7 @@ void read_socket(int fd, void *buf, size_t count)
   }
 }
 
-void send_connect_string()
+void send_connect_string(void)
 {
   write_socket(sockfd,connect_string,sizeof(connect_string));
   read_socket(sockfd,message,sizeof(struct _message));
@@ -100,9 +112,9 @@ void send_connect_string()
   read_socket(sockfd,message,message->data_length);  
 }
 
-void send_framebuffer_string();
+void send_framebuffer_string(void);
 
-int initADB()
+int initADB(void)
 {
   L("--Initializing adb access method--\n");
   pid_t pid;
@@ -121,7 +133,7 @@ int initADB()
     system("killall adbd");
     system("setprop service.adb.tcp.port -1");
     system("/sbin/adbd");
-    return;
+    exit(0);
     break;
   }
 
@@ -168,7 +180,7 @@ return 0;
 
 
 
-void send_framebuffer_string()//returns the fb struct size from adb
+void send_framebuffer_string(void)//returns the fb struct size from adb
 {
   int n;
   char *buffer=NULL;
@@ -203,6 +215,8 @@ void send_framebuffer_string()//returns the fb struct size from adb
 
   buffer=(char*)malloc(sizeof(char)*message->data_length);
 
+  struct fbinfo displayInfo;
+
   read_socket(sockfd,&displayInfo,sizeof(struct fbinfo));
 
   //     L("sizeof(struct fbinfo)=%d\n",sizeof(struct fbinfo));
@@ -215,9 +229,21 @@ void send_framebuffer_string()//returns the fb struct size from adb
   if (adbbuf==NULL)
   adbbuf=(unsigned int*)malloc(displayInfo.size);
 
+  screenformat.bitsPerPixel = displayInfo.bpp;
+  screenformat.width = displayInfo.width;
+  screenformat.height = displayInfo.height;
+  screenformat.redMax = displayInfo.red_length;
+  screenformat.greenMax = displayInfo.green_length;
+  screenformat.blueMax = displayInfo.blue_length;
+  screenformat.alphaMax = displayInfo.alpha_length;
+  screenformat.redShift = displayInfo.red_offset;
+  screenformat.greenShift = displayInfo.green_offset;
+  screenformat.blueShift = displayInfo.blue_offset;
+  screenformat.alphaShift = displayInfo.alpha_offset;
+  screenformat.size = displayInfo.size;
 }
 
-void updateADBFrame()
+unsigned int *readBufferADB(void)
 {
   int n=0;
   int count=0;
@@ -258,6 +284,12 @@ void updateADBFrame()
   //     if (resp!=A_OKAY)
   //      error("bad OKAY response");
 
+  return adbbuf;
+}
+
+void closeADB()
+{
+  close(sockfd);
 }
 
 // test start point

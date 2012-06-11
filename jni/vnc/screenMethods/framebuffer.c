@@ -21,21 +21,31 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "framebuffer.h"
-#include "common.h"
 #include "gui.h"
 
 int fbfd = -1;
-
+unsigned int *fbmmap;
 
 char framebuffer_device[256] = "/dev/graphics/fb0";
 
+struct fb_var_screeninfo scrinfo;
+struct fb_fix_screeninfo fscrinfo;
 
-void setFramebufferDevice(char *s)
+void FB_setDevice(char *s)
 {
   strcpy(framebuffer_device,s);
 }
 
-int initFramebuffer(void)
+void update_fb_info(void)
+{  
+  if (ioctl(fbfd, FBIOGET_VSCREENINFO, &scrinfo) != 0) {
+    L("ioctl error\n");
+    sendMsgToGui("~SHOW|Framebuffer ioctl error, please try out other display grab method\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+int initFB(void)
 {  
   L("--Initializing framebuffer access method--\n");
 
@@ -67,11 +77,10 @@ int initFramebuffer(void)
     size = scrinfo.yres * 2;
   }
 
-  if ((scrinfo.bits_per_pixel == 24)) {// && (fscrinfo.line_length/scrinfo.xres_virtual==CHAR_BIT*4))
-                                       scrinfo.bits_per_pixel = 32;
-
-                                       L("24-bit XRGB display detected\n");
-                                      }
+  if ((scrinfo.bits_per_pixel == 24)) {
+    scrinfo.bits_per_pixel = 32;
+    L("24-bit XRGB display detected\n");
+  }
 
   size_t fbSize = roundUpToPageSize(fscrinfo.line_length * size);
 
@@ -83,37 +92,38 @@ int initFramebuffer(void)
     return -1;
   } 
 
-  displayInfo.bpp = scrinfo.bits_per_pixel;
-  displayInfo.size = scrinfo.xres * scrinfo.yres * scrinfo.bits_per_pixel / CHAR_BIT;
-  displayInfo.width = scrinfo.xres;
-  displayInfo.height = scrinfo.yres;
-  displayInfo.red_offset = scrinfo.red.offset;
-  displayInfo.red_length = scrinfo.red.length;
-  displayInfo.green_offset = scrinfo.green.offset;
-  displayInfo.green_length = scrinfo.green.length;
-  displayInfo.blue_offset = scrinfo.blue.offset;
-  displayInfo.blue_length = scrinfo.blue.length;
-  displayInfo.alpha_offset = scrinfo.transp.offset;
-  displayInfo.alpha_length = scrinfo.transp.length;
+  screenformat.bitsPerPixel = scrinfo.bits_per_pixel;
+  screenformat.size = scrinfo.xres * scrinfo.yres * scrinfo.bits_per_pixel / CHAR_BIT;
+  screenformat.width = scrinfo.xres;
+  screenformat.height = scrinfo.yres;
+  screenformat.redShift = scrinfo.red.offset;
+  screenformat.redMax = scrinfo.red.length;
+  screenformat.greenShift = scrinfo.green.offset;
+  screenformat.greenMax = scrinfo.green.length;
+  screenformat.blueShift = scrinfo.blue.offset;
+  screenformat.blueMax = scrinfo.blue.length;
+  screenformat.alphaShift = scrinfo.transp.offset;
+  screenformat.alphaMax = scrinfo.transp.length;
 
   return 1;
 } 
 
-void cleanupFramebuffer(void) 
+void closeFB(void) 
 {
   if(fbfd != -1)
   close(fbfd);
 } 
 
-void update_fb_info()      
-{  
-  if (ioctl(fbfd, FBIOGET_VSCREENINFO, &scrinfo) != 0) {
-    L("ioctl error\n");
-    sendMsgToGui("~SHOW|Framebuffer ioctl error, please try out other display grab method\n");
-    exit(EXIT_FAILURE);
-  }
-} 
+struct fb_var_screeninfo FB_getscrinfo(void)
+{
+  return scrinfo;
+}
 
+unsigned int *readBufferFB(void)
+{
+  update_fb_info();
+  return fbmmap;
+}
 
 inline int roundUpToPageSize(int x) {
   return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
