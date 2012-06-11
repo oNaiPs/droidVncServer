@@ -35,15 +35,13 @@ void setFramebufferDevice(char *s)
   strcpy(framebuffer_device,s);
 }
 
-
 int initFramebuffer(void)
 {  
   L("--Initializing framebuffer access method--\n");
 
   fbmmap = MAP_FAILED;
 
-  if ((fbfd = open(framebuffer_device, O_RDWR)) == -1)
-  { 
+  if ((fbfd = open(framebuffer_device, O_RDWR)) == -1) { 
     L("Cannot open fb device %s\n", framebuffer_device);
     sendMsgToGui("~SHOW|Cannot open fb device, please try out other display grab method\n");
     return -1;
@@ -52,8 +50,7 @@ int initFramebuffer(void)
   update_fb_info();
 
 
-  if (ioctl(fbfd, FBIOGET_FSCREENINFO, &fscrinfo) != 0)
-  {
+  if (ioctl(fbfd, FBIOGET_FSCREENINFO, &fscrinfo) != 0) {
     L("ioctl error\n");
     return -1;
   }
@@ -64,69 +61,57 @@ int initFramebuffer(void)
     (int)scrinfo.xoffset, (int)scrinfo.yoffset,
     (int)scrinfo.bits_per_pixel);
 
-
-
-
-  size_t size=scrinfo.yres_virtual;
-  if (size<scrinfo.yres*2)
-  {
+  size_t size = scrinfo.yres_virtual;
+  if (size < scrinfo.yres * 2) {
     L("Using Droid workaround\n");
-    size=scrinfo.yres*2;
+    size = scrinfo.yres * 2;
   }
 
-  if ((scrinfo.bits_per_pixel==24))// && (fscrinfo.line_length/scrinfo.xres_virtual==CHAR_BIT*4))
-  {
-    scrinfo.bits_per_pixel=32;
+  if ((scrinfo.bits_per_pixel == 24)) {// && (fscrinfo.line_length/scrinfo.xres_virtual==CHAR_BIT*4))
+                                       scrinfo.bits_per_pixel = 32;
 
-    L("24-bit XRGB display detected\n");
-  }
+                                       L("24-bit XRGB display detected\n");
+                                      }
 
   size_t fbSize = roundUpToPageSize(fscrinfo.line_length * size);
 
   fbmmap = mmap(NULL, fbSize , PROT_READ|PROT_WRITE ,  MAP_SHARED , fbfd, 0);
 
-  if (fbmmap == MAP_FAILED)
-  { 
+  if (fbmmap == MAP_FAILED) { 
     L("mmap failed\n");
     sendMsgToGui("~SHOW|Framebuffer mmap failed, please try out other display grab method\n");
     return -1;
   } 
 
-    displayInfo.bpp = scrinfo.bits_per_pixel;
-    displayInfo.size = scrinfo.xres * scrinfo.yres * scrinfo.bits_per_pixel / CHAR_BIT;
-    displayInfo.width = scrinfo.xres;
-    displayInfo.height = scrinfo.yres;
-    displayInfo.red_offset = scrinfo.red.offset;
-    displayInfo.red_length = scrinfo.red.length;
-    displayInfo.green_offset = scrinfo.green.offset;
-    displayInfo.green_length = scrinfo.green.length;
-    displayInfo.blue_offset = scrinfo.blue.offset;
-    displayInfo.blue_length = scrinfo.blue.length;
-    displayInfo.alpha_offset = scrinfo.transp.offset;
-    displayInfo.alpha_length = scrinfo.transp.length;
+  displayInfo.bpp = scrinfo.bits_per_pixel;
+  displayInfo.size = scrinfo.xres * scrinfo.yres * scrinfo.bits_per_pixel / CHAR_BIT;
+  displayInfo.width = scrinfo.xres;
+  displayInfo.height = scrinfo.yres;
+  displayInfo.red_offset = scrinfo.red.offset;
+  displayInfo.red_length = scrinfo.red.length;
+  displayInfo.green_offset = scrinfo.green.offset;
+  displayInfo.green_length = scrinfo.green.length;
+  displayInfo.blue_offset = scrinfo.blue.offset;
+  displayInfo.blue_length = scrinfo.blue.length;
+  displayInfo.alpha_offset = scrinfo.transp.offset;
+  displayInfo.alpha_length = scrinfo.transp.length;
 
-    return 1;
+  return 1;
 } 
 
 void cleanupFramebuffer(void) 
 {
   if(fbfd != -1)
-  {
-    close(fbfd);
-  } 
+  close(fbfd);
 } 
-
-
 
 void update_fb_info()      
 {  
-
-  if (ioctl(fbfd, FBIOGET_VSCREENINFO, &scrinfo) != 0)
-  {
+  if (ioctl(fbfd, FBIOGET_VSCREENINFO, &scrinfo) != 0) {
     L("ioctl error\n");
     sendMsgToGui("~SHOW|Framebuffer ioctl error, please try out other display grab method\n");
     exit(EXIT_FAILURE);
-  } 
+  }
 } 
 
 

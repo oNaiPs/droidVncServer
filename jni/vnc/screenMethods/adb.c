@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 //STATE - NOT WORKING
 //TODO execute adb in custom tcp port on method initialization
+//we must kill previous adb process or it wont be able to bind to listener install
 
 #include "adb.h"
 
@@ -64,8 +65,6 @@ int sockfd;
 
 ssize_t write_socket(int fd, const void *buf, size_t count)
 {
-  //   L("--Writing %d \n",count);
-
   int n = write(fd,buf,count);
 
   if (n < 0) 
@@ -79,27 +78,23 @@ void read_socket(int fd, void *buf, size_t count)
 {
   int n=0;
 
-  while (count>0)
-  {
+  while (count>0) {
     n=read(fd,buf,count);
 
     if (n < 0)
     L("ERROR reading from socket\n");
 
-
-    count-=n;
+    count -= n;
   }
-  return;
 }
 
 void send_connect_string()
 {
   write_socket(sockfd,connect_string,sizeof(connect_string));
-
   read_socket(sockfd,message,sizeof(struct _message));
 
   if (message->command!=A_CNXN)
-  L("bad A_CNXN response\n");
+    L("bad A_CNXN response\n");
 
   //lets read,  i don't want this
   read_socket(sockfd,message,message->data_length);  
@@ -110,20 +105,29 @@ void send_framebuffer_string();
 int initADB()
 {
   L("--Initializing adb access method--\n");
+  pid_t pid;
   int portno;
   struct sockaddr_in serv_addr;
   struct hostent *server;
   adbbuf=NULL;
 
   //    property_set("service.adb.tcp.port", "5555");
-  system("setprop service.adb.tcp.port 5555");
-  system("adbd");
+  
+  switch (pid = fork()) {
+    case -1:
+    perror("adb::fork()");
+    exit(EXIT_FAILURE);
+    case 0: // in the child
+    system("killall adbd");
+    system("setprop service.adb.tcp.port -1");
+    system("/sbin/adbd");
+    return;
+    break;
+  }
 
-  message=malloc(sizeof(struct _message));
-  okay_message=malloc(sizeof(struct _message));
-
-
-  //     L("1\n");
+  sleep(1);
+  message = malloc(sizeof(struct _message));
+  okay_message = malloc(sizeof(struct _message));
 
   portno = 5555;
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -255,18 +259,6 @@ void updateADBFrame()
   //      error("bad OKAY response");
 
 }
-
-#ifndef ANDROID
-void main()
-{
-  connect_to_adb();
-  L("up\n");
-  update_frame();
-  L("up\n");
-  update_frame();
-}
-
-#endif
 
 // test start point
 // int main(int argc, char *argv[])
