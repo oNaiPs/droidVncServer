@@ -1,0 +1,2 @@
+- The surfaceflinger method is present from version 2.3.X and should be supported by all devices.
+- It connects with the surfaceflinger service through a Binder interface.
