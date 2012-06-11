@@ -1,7 +1,7 @@
+v1.1a
 
-- Changed to official libvncserver 0.9- Changed to official libvncserver 0.99
-- Decoupled native screen grabber from jni sources, you wont need to have AOSP anymore
-
+- Changed to official libvncserver v0.9.9.
+- Decoupled native screen grabber from jni sources, you wont need to have AOSP anymore, just the precompiled libs.
 
 v1.0a
 

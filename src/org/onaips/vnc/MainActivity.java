@@ -16,12 +16,8 @@ import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.ads.AdRequest;
-import com.google.ads.AdView;
-
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -33,8 +29,8 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -49,15 +45,20 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
 import android.view.View.OnClickListener;
+import android.view.Window;
 import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.animation.Animation.AnimationListener;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.ads.AdRequest;
+import com.google.ads.AdSize;
+import com.google.ads.AdView;
 
 public class MainActivity extends Activity 
 {      
@@ -69,13 +70,12 @@ public class MainActivity extends Activity
 
 	static final int APP_ID = 123;
 	static final String VNC_LOG ="VNCserver";
-
-	private ServerManager s;
-
-	Animation buttonAnimation=null;
-	SharedPreferences preferences;
-	ProgressDialog dialog=null;
-	AlertDialog startDialog;
+	
+	private AdView adView = null;
+	private ServerManager s = null;
+	private Animation buttonAnimation=null;
+	private SharedPreferences preferences;
+	private AlertDialog startDialog;
 
 	void doBindService() {
 		bindService(new Intent(this, ServerManager.class), mConnection,
@@ -124,6 +124,8 @@ public class MainActivity extends Activity
 	@Override  
 	protected void onDestroy()
 	{
+		if (adView != null)
+			adView.destroy();
 		super.onDestroy();
 		unregisterReceiver(mReceiver);
 	}
@@ -131,7 +133,7 @@ public class MainActivity extends Activity
 	//rodar vnc com acc   
 
 
-
+ 
 
 	/** Called when the activity is first created. */
 	@Override
@@ -186,7 +188,7 @@ public class MainActivity extends Activity
 		{
 
 			// Look up the AdView as a resource and load a request.
-			AdView adView = (AdView)this.findViewById(R.id.adView);
+			adView = (AdView)this.findViewById(R.id.adView);
 			adView.loadAd(new AdRequest());
 		} 
 
@@ -226,7 +228,8 @@ public class MainActivity extends Activity
 		}); 
 	}
 
-
+	
+	
 	public void log(String s)
 	{
 		Log.v(VNC_LOG,s);

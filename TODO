@@ -1,5 +1,9 @@
-- change tcp socket to unix socket
-- click on address field will iterate show interface addresses
-- map volume keys
-- custom key mapping
-- add MIPS and X86 to APP_ABI (and more)
+[ADD] GnuTLS support (already working on libvncserver)
+[ADD] Map volume keys
+[ADD] Custom key mapping
+[ADD] MIPS and X86 to APP_ABI (and more)
+[ADD] Key/Touch injection though WindowManagerService/Binder mechanism (looking for a aidl->cpp translator)
+
+[CHANGE] Tcp socket to unix socket
+
+[FIX] Click on address field will iterate show interface addresses
