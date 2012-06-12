@@ -2,18 +2,19 @@
 #if 0 /* in case someone actually tries to compile this */
 
 /* example.c - an example of using libpng
- * Last changed in libpng 1.2.37 [June 4, 2009]
- * This file has been placed in the public domain by the authors.
- * Maintained 1998-2010 Glenn Randers-Pehrson
- * Maintained 1996, 1997 Andreas Dilger)
- * Written 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+ * Last changed in libpng 1.5.10 [March 8, 2012]
+ * Maintained 1998-2012 Glenn Randers-Pehrson
+ * Maintained 1996, 1997 Andreas Dilger
+ * Written 1995, 1996 Guy Eric Schalnat, Group 42, Inc.
  */
 
 /* This is an example of how to use libpng to read and write PNG files.
- * The file libpng.txt is much more verbose then this.  If you have not
+ * The file libpng-manual.txt is much more verbose then this.  If you have not
  * read it, do so first.  This was designed to be a starting point of an
  * implementation.  This is not officially part of libpng, is hereby placed
  * in the public domain, and therefore does not require a copyright notice.
+ * To the extent possible under law, the authors have waived all copyright and
+ * related or neighboring rights to this file.
  *
  * This file does not currently compile, because it is missing certain
  * parts, like allocating memory to hold an image.  You will have to
@@ -21,6 +22,10 @@
  * working PNG reader/writer, see pngtest.c, included in this distribution;
  * see also the programs in the contrib directory.
  */
+
+#define _POSIX_SOURCE 1  /* libpng and zlib are POSIX-compliant.  You may
+                          * change this if your application uses non-POSIX
+                          * extensions. */
 
 #include "png.h"
 
@@ -31,7 +36,7 @@
   */
 
 #ifndef png_jmpbuf
-#  define png_jmpbuf(png_ptr) ((png_ptr)->jmpbuf)
+#  define png_jmpbuf(png_ptr) ((png_ptr)->png_jmpbuf)
 #endif
 
 /* Check to see if a file is a PNG file using png_sig_cmp().  png_sig_cmp()
@@ -121,7 +126,7 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
    if (info_ptr == NULL)
    {
       fclose(fp);
-      png_destroy_read_struct(&png_ptr, png_infopp_NULL, png_infopp_NULL);
+      png_destroy_read_struct(&png_ptr, NULL, NULL);
       return (ERROR);
    }
 
@@ -133,7 +138,7 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
    if (setjmp(png_jmpbuf(png_ptr)))
    {
       /* Free all of the memory associated with the png_ptr and info_ptr */
-      png_destroy_read_struct(&png_ptr, &info_ptr, png_infopp_NULL);
+      png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
       fclose(fp);
       /* If we get here, we had a problem reading the file */
       return (ERROR);
@@ -160,11 +165,11 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
     * If you have enough memory to read in the entire image at once,
     * and you need to specify only transforms that can be controlled
     * with one of the PNG_TRANSFORM_* bits (this presently excludes
-    * dithering, filling, setting background, and doing gamma
+    * quantizing, filling, setting background, and doing gamma
     * adjustment), then you can read the entire image (including
     * pixels) into the info structure with this call:
     */
-   png_read_png(png_ptr, info_ptr, png_transforms, png_voidp_NULL);
+   png_read_png(png_ptr, info_ptr, png_transforms, NULL);
 
 #else
    /* OK, you're doing it the hard way, with the lower-level functions */
@@ -175,7 +180,7 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
    png_read_info(png_ptr, info_ptr);
 
    png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
-       &interlace_type, int_p_NULL, int_p_NULL);
+       &interlace_type, NULL, NULL);
 
    /* Set up the data transformations you want.  Note that these are all
     * optional.  Only call them if you want/need them.  Many of the
@@ -183,8 +188,15 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
     * are mutually exclusive.
     */
 
-   /* Tell libpng to strip 16 bit/color files down to 8 bits/color */
+   /* Tell libpng to strip 16 bit/color files down to 8 bits/color.
+    * Use accurate scaling if it's available, otherwise just chop off the
+    * low byte.
+    */
+#ifdef PNG_READ_SCALE_16_TO_8_SUPPORTED
+    png_set_scale_16(png_ptr);
+#else
    png_set_strip_16(png_ptr);
+#endif
 
    /* Strip alpha bytes from the input data without combining with the
     * background (not recommended).
@@ -271,7 +283,8 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
          png_set_gamma(png_ptr, screen_gamma, 0.45455);
    }
 
-   /* Dither RGB files down to 8 bit palette or reduce palettes
+#ifdef PNG_READ_QUANTIZE_SUPPORTED
+   /* Quantize RGB files down to 8 bit palette or reduce palettes
     * to the number of colors available on your screen.
     */
    if (color_type & PNG_COLOR_MASK_COLOR)
@@ -282,11 +295,11 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
       /* This reduces the image to the application supplied palette */
       if (/* We have our own palette */)
       {
-         /* An array of colors to which the image should be dithered */
+         /* An array of colors to which the image should be quantized */
          png_color std_color_cube[MAX_SCREEN_COLORS];
 
-         png_set_dither(png_ptr, std_color_cube, MAX_SCREEN_COLORS,
-            MAX_SCREEN_COLORS, png_uint_16p_NULL, 0);
+         png_set_quantize(png_ptr, std_color_cube, MAX_SCREEN_COLORS,
+            MAX_SCREEN_COLORS, NULL, 0);
       }
       /* This reduces the image to the palette supplied in the file */
       else if (png_get_PLTE(png_ptr, info_ptr, &palette, &num_palette))
@@ -295,10 +308,11 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
 
          png_get_hIST(png_ptr, info_ptr, &histogram);
 
-         png_set_dither(png_ptr, palette, num_palette,
+         png_set_quantize(png_ptr, palette, num_palette,
                         max_screen_colors, histogram, 0);
       }
    }
+#endif /* PNG_READ_QUANTIZE_SUPPORTED */
 
    /* Invert monochrome files to have 0 as white and 1 as black */
    png_set_invert_mono(png_ptr);
@@ -328,11 +342,16 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
    /* Add filler (or alpha) byte (before/after each RGB triplet) */
    png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
 
+#ifdef PNG_READ_INTERLACING_SUPPORTED
    /* Turn on interlace handling.  REQUIRED if you are not using
     * png_read_image().  To see how to handle interlacing passes,
     * see the png_read_row() method below:
     */
    number_passes = png_set_interlace_handling(png_ptr);
+#else
+   number_passes = 1;
+#endif /* PNG_READ_INTERLACING_SUPPORTED */
+
 
    /* Optional call to gamma correct and add the background to the palette
     * and update info structure.  REQUIRED if you are expecting libpng to
@@ -365,17 +384,17 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
 #ifdef single /* Read the image a single row at a time */
       for (y = 0; y < height; y++)
       {
-         png_read_rows(png_ptr, &row_pointers[y], png_bytepp_NULL, 1);
+         png_read_rows(png_ptr, &row_pointers[y], NULL, 1);
       }
 
 #else no_single /* Read the image several rows at a time */
       for (y = 0; y < height; y += number_of_rows)
       {
 #ifdef sparkle /* Read the image using the "sparkle" effect. */
-         png_read_rows(png_ptr, &row_pointers[y], png_bytepp_NULL,
+         png_read_rows(png_ptr, &row_pointers[y], NULL,
             number_of_rows);
 #else no_sparkle /* Read the image using the "rectangle" effect */
-         png_read_rows(png_ptr, png_bytepp_NULL, &row_pointers[y],
+         png_read_rows(png_ptr, NULL, &row_pointers[y],
             number_of_rows);
 #endif no_sparkle /* Use only one of these two methods */
       }
@@ -392,7 +411,7 @@ void read_png(FILE *fp, unsigned int sig_read)  /* File is already open */
    /* At this point you have read the entire image */
 
    /* Clean up after the read, and free any memory allocated - REQUIRED */
-   png_destroy_read_struct(&png_ptr, &info_ptr, png_infopp_NULL);
+   png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
    /* Close the file */
    fclose(fp);
@@ -425,13 +444,13 @@ initialize_png_reader(png_structp *png_ptr, png_infop *info_ptr)
 
    if (*info_ptr == NULL)
    {
-      png_destroy_read_struct(png_ptr, info_ptr, png_infopp_NULL);
+      png_destroy_read_struct(png_ptr, info_ptr, NULL);
       return (ERROR);
    }
 
    if (setjmp(png_jmpbuf((*png_ptr))))
    {
-      png_destroy_read_struct(png_ptr, info_ptr, png_infopp_NULL);
+      png_destroy_read_struct(png_ptr, info_ptr, NULL);
       return (ERROR);
    }
 
@@ -460,7 +479,7 @@ process_data(png_structp *png_ptr, png_infop *info_ptr,
    if (setjmp(png_jmpbuf((*png_ptr))))
    {
       /* Free the png_ptr and info_ptr memory on error */
-      png_destroy_read_struct(png_ptr, info_ptr, png_infopp_NULL);
+      png_destroy_read_struct(png_ptr, info_ptr, NULL);
       return (ERROR);
    }
 
@@ -514,6 +533,7 @@ row_callback(png_structp png_ptr, png_bytep new_row,
     */
    png_bytep old_row = ((png_bytep *)our_data)[row_num];
 
+#ifdef PNG_READ_INTERLACING_SUPPORTED
    /* If both rows are allocated then copy the new row
     * data to the corresponding row data.
     */
@@ -542,6 +562,7 @@ row_callback(png_structp png_ptr, png_bytep new_row,
     * to pass the current row as new_row, and the function will combine
     * the old row and the new row.
     */
+#endif /* PNG_READ_INTERLACING_SUPPORTED */
 }
 
 end_callback(png_structp png_ptr, png_infop info)
@@ -590,7 +611,7 @@ void write_png(char *file_name /* , ... other image information ... */)
    if (info_ptr == NULL)
    {
       fclose(fp);
-      png_destroy_write_struct(&png_ptr,  png_infopp_NULL);
+      png_destroy_write_struct(&png_ptr,  NULL);
       return (ERROR);
    }
 
@@ -625,7 +646,7 @@ void write_png(char *file_name /* , ... other image information ... */)
     * image info living in the structure.  You could "|" many
     * PNG_TRANSFORM flags into the png_transforms integer here.
     */
-   png_write_png(png_ptr, info_ptr, png_transforms, png_voidp_NULL);
+   png_write_png(png_ptr, info_ptr, png_transforms, NULL);
 
 #else
    /* This is the hard way */
@@ -653,14 +674,18 @@ void write_png(char *file_name /* , ... other image information ... */)
 
    /* Optional significant bit (sBIT) chunk */
    png_color_8 sig_bit;
+
    /* If we are dealing with a grayscale image then */
    sig_bit.gray = true_bit_depth;
+
    /* Otherwise, if we are dealing with a color image then */
    sig_bit.red = true_red_bit_depth;
    sig_bit.green = true_green_bit_depth;
    sig_bit.blue = true_blue_bit_depth;
+
    /* If the image has an alpha channel then */
    sig_bit.alpha = true_alpha_bit_depth;
+
    png_set_sBIT(png_ptr, info_ptr, &sig_bit);
 
 
@@ -670,21 +695,38 @@ void write_png(char *file_name /* , ... other image information ... */)
    png_set_gAMA(png_ptr, info_ptr, gamma);
 
    /* Optionally write comments into the image */
-   text_ptr[0].key = "Title";
-   text_ptr[0].text = "Mona Lisa";
-   text_ptr[0].compression = PNG_TEXT_COMPRESSION_NONE;
-   text_ptr[1].key = "Author";
-   text_ptr[1].text = "Leonardo DaVinci";
-   text_ptr[1].compression = PNG_TEXT_COMPRESSION_NONE;
-   text_ptr[2].key = "Description";
-   text_ptr[2].text = "<long text>";
-   text_ptr[2].compression = PNG_TEXT_COMPRESSION_zTXt;
-#ifdef PNG_iTXt_SUPPORTED
-   text_ptr[0].lang = NULL;
-   text_ptr[1].lang = NULL;
-   text_ptr[2].lang = NULL;
-#endif
-   png_set_text(png_ptr, info_ptr, text_ptr, 3);
+   {
+      png_text text_ptr[3];
+
+      char key0[]="Title";
+      char text0[]="Mona Lisa";
+      text_ptr[0].key = key0;
+      text_ptr[0].text = text0;
+      text_ptr[0].compression = PNG_TEXT_COMPRESSION_NONE;
+      text_ptr[0].itxt_length = 0;
+      text_ptr[0].lang = NULL;
+      text_ptr[0].lang_key = NULL;
+
+      char key1[]="Author";
+      char text1[]="Leonardo DaVinci";
+      text_ptr[1].key = key1;
+      text_ptr[1].text = text1;
+      text_ptr[1].compression = PNG_TEXT_COMPRESSION_NONE;
+      text_ptr[1].itxt_length = 0;
+      text_ptr[1].lang = NULL;
+      text_ptr[1].lang_key = NULL;
+
+      char key2[]="Description";
+      char text2[]="<long text>";
+      text_ptr[2].key = key2;
+      text_ptr[2].text = text2;
+      text_ptr[2].compression = PNG_TEXT_COMPRESSION_zTXt;
+      text_ptr[2].itxt_length = 0;
+      text_ptr[2].lang = NULL;
+      text_ptr[2].lang_key = NULL;
+
+      png_set_text(write_ptr, write_info_ptr, text_ptr, 3);
+   }
 
    /* Other optional chunks like cHRM, bKGD, tRNS, tIME, oFFs, pHYs */
 
@@ -748,6 +790,7 @@ void write_png(char *file_name /* , ... other image information ... */)
    /* Turn on interlace handling if you are not using png_write_image() */
    if (interlacing)
       number_passes = png_set_interlace_handling(png_ptr);
+
    else
       number_passes = 1;
 
