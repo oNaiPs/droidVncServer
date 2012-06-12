@@ -1,17 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen
-  xmlns:android="http://schemas.android.com/apk/res/android">
-<EditTextPreference android:key="password" android:title="VNC password" android:password="true" android:summary="Protect your VNC connection"></EditTextPreference>-->
-<ListPreference android:defaultValue="0" android:key="rotation" android:title="Rotation" android:entries="@array/rotation_strings" android:entryValues="@array/rotation_values" android:summary="Rotate screen if you like"></ListPreference> 
-<ListPreference android:defaultValue="100" android:key="scale" android:title="Scale Screen" android:entries="@array/scale_strings" android:entryValues="@array/scale_values" android:summary="Only 100 and 50 working for now"></ListPreference>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
 
-<EditTextPreference android:inputType="number" android:defaultValue="5901" android:key="port" android:title="VNC port" android:summary="Note: It will not show error if cannot bind port"></EditTextPreference>
-<ListPreference android:title="Display Access Method" android:summary="Change if you are experiencing display issues" android:key="displaymode" android:defaultValue="auto" android:entries="@array/display_mode_strings" android:entryValues="@array/display_mode_values"></ListPreference>
-<CheckBoxPreference android:summaryOn="Warning! Just activate if you have your daemon running fine." android:title="Start server on boot" android:defaultValue="false" android:summaryOff="Warning! Just activate if you have your daemon running fine." android:key="startdaemononboot"></CheckBoxPreference>
-<CheckBoxPreference android:key="screenturnoff" android:title="Don't Let Screen Turn off" android:defaultValue="false"></CheckBoxPreference>
-<CheckBoxPreference android:key="notifyclient" android:title="Notify When Client Connects" android:summary="Show notification on status bar" android:defaultValue="true"></CheckBoxPreference>
-<CheckBoxPreference android:key="asroot" android:defaultValue="true" android:title="Execute server as root" android:summary="Unselect this if you do not want to run the server as root."></CheckBoxPreference>
-<CheckBoxPreference android:key="hidead" android:defaultValue="false" android:title="Disable Bottom Ad" android:summary="Select this if you don't want to view the ad."></CheckBoxPreference>
+    <PreferenceCategory android:title="VNC Server settings" >
+        <EditTextPreference
+            android:key="password"
+            android:password="true"
+            android:summary="Protect your VNC connection"
+            android:title="VNC password" >
+        </EditTextPreference>
+        <EditTextPreference
+            android:defaultValue="5901"
+            android:inputType="number"
+            android:key="port"
+            android:summary="Note: It will not show error if cannot bind port"
+            android:title="VNC port" >
+        </EditTextPreference>
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="startdaemononboot"
+            android:summaryOff="Warning! Just activate if you have your daemon running fine."
+            android:summaryOn="Warning! Just activate if you have your daemon running fine."
+            android:title="Start server on boot" >
+        </CheckBoxPreference>
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Display settings" >
+        <ListPreference
+            android:defaultValue="0"
+            android:entries="@array/rotation_strings"
+            android:entryValues="@array/rotation_values"
+            android:key="rotation"
+            android:summary="Rotate screen if you like"
+            android:title="Rotation" >
+        </ListPreference>
+        <ListPreference
+            android:defaultValue="100"
+            android:entries="@array/scale_strings"
+            android:entryValues="@array/scale_values"
+            android:key="scale"
+            android:summary="Only 100 and 50 working for now"
+            android:title="Scale Screen" >
+        </ListPreference>
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="rotate_zte"
+            android:summary="Some ZTE devices have the framebuffer rotated."
+            android:title="Rotate display by 180º" >
+        </CheckBoxPreference>
+
+        <ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/display_mode_strings"
+            android:entryValues="@array/display_mode_values"
+            android:key="displaymode"
+            android:summary="Change if you are experiencing display issues"
+            android:title="Display Access Method" >
+        </ListPreference>
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="screenturnoff"
+            android:title="Don&apos;t Let Screen Turn off" >
+        </CheckBoxPreference>
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="notifyclient"
+            android:summary="Show notification on status bar"
+            android:title="Notify When Client Connects" >
+        </CheckBoxPreference>
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Misc Settings" >
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="asroot"
+            android:summary="Unselect this if you do not want to run the server as root."
+            android:title="Execute server as root" >
+        </CheckBoxPreference>
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="hidead"
+            android:summary="Select this if you don&apos;t want to view the ad."
+            android:title="Disable Bottom Ad" >
+        </CheckBoxPreference>
+    </PreferenceCategory>
 
 </PreferenceScreen>
- 

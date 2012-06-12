@@ -16,6 +16,8 @@ import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.http.conn.util.InetAddressUtils;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -359,18 +361,20 @@ public class MainActivity extends Activity
 			t.setText("");
 			b.setBackgroundDrawable(getResources().getDrawable(R.drawable.btnstart_normal));
 			b2.setVisibility(View.INVISIBLE);
-		}
+		}  
 
-	}
+	} 
 
 	public String getIpAddress() {
 		try {
+			String ipv4;
 			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
 				NetworkInterface intf = en.nextElement();
 				for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
 					InetAddress inetAddress = enumIpAddr.nextElement();
 					if (!inetAddress.isLoopbackAddress()) {
-						return inetAddress.getHostAddress().toString();
+						if (!inetAddress.isLoopbackAddress() && InetAddressUtils.isIPv4Address(ipv4=inetAddress.getHostAddress())) 
+							return ipv4;
 					}
 				}
 			}
@@ -516,7 +520,7 @@ public class MainActivity extends Activity
 
 			new AlertDialog.Builder(this)
 			.setTitle("About")
-			.setMessage(Html.fromHtml("version " + packageVersion() + "<br><br>Code: @oNaiPs<br><br>Graphics: ricardomendes.net"))
+			.setMessage(Html.fromHtml("version " + packageVersion() + "<br><br>Code: @oNaiPs<br><br>Graphics: ricardomendes.net<br><br>Under the GPLv3"))
 			.setPositiveButton("Close", null)
 			.setNegativeButton("Open Website", new DialogInterface.OnClickListener() {
 				public void onClick(DialogInterface arg0, int arg1) {
@@ -613,14 +617,17 @@ public class MainActivity extends Activity
 			new AlertDialog.Builder(this)
 			.setTitle(getString(R.string.app_name))
 			.setIcon(android.R.drawable.ic_dialog_info)
-			.setMessage("Do you want to send a bug report to the dev? Please specify what problem is ocurring.\n\nMake sure you started & stopped the server before submitting")
+			.setMessage("Do you want to send a bug report to the dev? Please specify what problem is ocurring.\n\n" +
+					"Make sure you started & stopped the server before submitting")
 			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener(){
 				public void onClick(DialogInterface dialog, int whichButton){
 					intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 					intent.putExtra(EXTRA_SEND_INTENT_ACTION, Intent.ACTION_SENDTO);
 					final String email = "onaips@gmail.com";
 					intent.putExtra(EXTRA_DATA, Uri.parse("mailto:" + email));
-					intent.putExtra(EXTRA_ADDITIONAL_INFO,"Problem Description: \n\n\n\n---------DEBUG--------\n" + getString(R.string.device_info_fmt,getVersionNumber(getApplicationContext()),Build.MODEL,Build.VERSION.RELEASE, getFormattedKernelVersion(), Build.DISPLAY));
+					intent.putExtra(EXTRA_ADDITIONAL_INFO,"Problem Description: \n\n\n\n---------DEBUG--------\n" + 
+					getString(R.string.device_info_fmt,getVersionNumber(getApplicationContext()),Build.MODEL,Build.VERSION.RELEASE, 
+							getFormattedKernelVersion(), Build.DISPLAY));
 					intent.putExtra(Intent.EXTRA_SUBJECT, "droid VNC server: Debug Info");
 					intent.putExtra(EXTRA_FORMAT, "time");
 

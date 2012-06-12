@@ -31,11 +31,21 @@ getscreenformat_fn_type getscreenformat_flinger = NULL;
 int initFlinger(void)
 {
   L("--Loading flinger native lib--\n");
+  int i,len;
+  char lib_name[64];
 
-  flinger_lib = dlopen("/data/libdvnc_flinger_sdk14.so", RTLD_NOW);
-  if(flinger_lib == NULL) {
-    L("Couldnt load library! Error string: %s\n",dlerror());
-    return -1;
+  len=ARR_LEN(compiled_sdks);
+  for (i=0;i<len;i++) {
+    sprintf(lib_name, DVNC_FILES_PATH "/libdvnc_flinger_sdk%d.so",compiled_sdks[i]);
+
+    L("Loading lib: %s\n",lib_name);
+    flinger_lib = dlopen(lib_name, RTLD_NOW);
+    if (flinger_lib != NULL)
+      break;
+    else if(i+1 == len) {
+      L("Couldnt load any flinger library! Error string: %s\n",dlerror());
+      return -1;
+    }
   }
 
   init_fn_type init_flinger = dlsym(flinger_lib,"init_flinger");
@@ -61,12 +71,15 @@ int initFlinger(void)
     L("Couldn't load get_screenformat! Error string: %s\n",dlerror());
     return -1;
   }
+L("AKI1\n");
 
   int ret = init_flinger();
+  L("AKII12");
   if (ret == -1) {
   L("flinger method not supported by this device!\n");
   return -1;
   }
+L("AKI2\n");
 
   screenformat = getScreenFormatFlinger();
   if ( screenformat.width <= 0 ) {
@@ -78,7 +91,6 @@ int initFlinger(void)
     L("Error: Could not read surfaceflinger buffer!\n");
     return -1;
   }
-
   return 0;
 }
 

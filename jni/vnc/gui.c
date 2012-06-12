@@ -105,7 +105,7 @@ void *handle_connections()
     n = recvfrom(hServerSocket,pBuffer,BUFFER_SIZE,0,(struct sockaddr *)&from,&fromlen);
     if (n < 0) perror("recvfrom");
 
-    L("Recebido: %s\n",pBuffer);
+    //L("Recebido: %s\n",pBuffer);
 
     if (strstr(pBuffer,"~PING|")!=NULL)
     {

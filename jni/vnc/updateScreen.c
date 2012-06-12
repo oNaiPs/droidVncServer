@@ -24,11 +24,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 void FUNCTION(void)
 {  
-  int i,j;
+  int i,j,r;
   int offset=0,pixelToVirtual;
   OUT_T* a;
   OUT_T* b=0;
   struct fb_var_screeninfo scrinfo; //we'll need this to detect double FB on framebuffer
+
+  if (display_rotate_180){
+    r=rotation;
+    rotation+=180;
+  }
 
   if (method==FRAMEBUFFER) {
     scrinfo = FB_getscrinfo();
@@ -176,7 +181,9 @@ void FUNCTION(void)
     //        L("Changed x(%d-%d) y(%d-%d)\n",min_x,max_x,min_y,max_y);
 
     rfbMarkRectAsModified(vncscr, min_x, min_y, max_x, max_y);
-  } 
+  }
+  if (display_rotate_180)
+    rotation=r;
 }
 
 

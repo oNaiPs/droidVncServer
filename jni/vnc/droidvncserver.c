@@ -47,9 +47,10 @@ unsigned int *vncbuf;
 static rfbScreenInfoPtr vncscr;
 
 uint32_t idle = 0;
-uint32_t standby = 0;
+uint32_t standby = 1;
 uint16_t rotation = 0;
 uint16_t scaling = 100;
+uint8_t display_rotate_180 = 0;
 
 //reverse connection
 char *rhost = NULL;
@@ -78,11 +79,6 @@ enum method_type method=AUTO;
 inline int getCurrentRotation()
 {
   return rotation;
-}
-
-inline int isIdle()
-{
-  return idle;
 }
 
 void setIdle(int i)
@@ -175,8 +171,9 @@ void initVncServer(int argc, char **argv)
     vncscr->passwordCheck = rfbCheckPasswordByList;
   } 
 
-  vncscr->httpDir="/data/data/org.onaips.vnc/files/";
-  vncscr->sslcertfile="self.pem";
+  vncscr->httpDir = "webclients/";
+//  vncscr->httpEnableProxyConnect = TRUE;
+  vncscr->sslcertfile = "self.pem";
 
   vncscr->serverFormat.redShift = screenformat.redShift;
   vncscr->serverFormat.greenShift = screenformat.greenShift;
@@ -206,7 +203,8 @@ void initVncServer(int argc, char **argv)
         vncscr->serverFormat.bitsPerPixel);
 
       sendMsgToGui("~SHOW|Unsupported pixel depth, please send bug report.\n");
-      return;
+      close_app();
+      exit(-1);
     }
 
     /* Mark as dirty since we haven't sent any updates at all yet. */
@@ -218,7 +216,7 @@ void initVncServer(int argc, char **argv)
 void rotate(int value)
 {
 
-  L("rotate()");
+  L("rotate()\n");
 
   if (value == -1 || 
       ((value == 90 || value == 270) && (rotation == 0 || rotation == 180)) ||
@@ -302,16 +300,22 @@ void initGrabberMethod()
       method = GRALLOC;
     else if (initFB() != -1) {
       method = FRAMEBUFFER;
-    } else if (initADB() != -1) {
+    }
+    #if 0
+    else if (initADB() != -1) {
       method = ADB;
       readBufferADB();
     }
+    #endif
   } else if (method == FRAMEBUFFER)
     initFB();
+  #if 0
   else if (method == ADB) {
     initADB(); 
     readBufferADB();
-  } else if (method == GRALLOC)
+  }
+  #endif
+  else if (method == GRALLOC)
     initGralloc();
   else if (method == FLINGER)
     initFlinger();
@@ -326,7 +330,8 @@ void printUsage(char **argv)
     "-p <password>\t- Password to access server\n"
     "-r <rotation>\t- Screen rotation (degrees) (0,90,180,270)\n"
     "-R <host:port>\t- Host for reverse connection\n" 
-    "-s <scale>\t- Scale percentage (20,30,50,100,150)\n\n" );
+    "-s <scale>\t- Scale percentage (20,30,50,100,150)\n"
+    "-z\t- Rotate display 180º (for zte compatibility)\n\n");
 }
 
 
@@ -336,6 +341,7 @@ int main(int argc, char **argv)
   signal(SIGINT, close_app);
   signal(SIGKILL, close_app);
   signal(SIGILL, close_app);
+  long usec;
 
   if(argc > 1) {
     int i=1;
@@ -354,6 +360,10 @@ int main(int argc, char **argv)
           case 'f': 
           i++; 
           FB_setDevice(argv[i]);
+          break;
+          case 'z': 
+          i++; 
+          display_rotate_180=1;
           break;
           case 'P': 
           i++; 
@@ -396,12 +406,12 @@ int main(int argc, char **argv)
           } else {
             L("Grab method \"%s\" not found, sticking with auto-detection.\n",argv[i]);
           }
-break;
-}
-}
-i++;
-}
-}
+          break;
+          }
+        }
+      i++;
+      }
+    }
 
     L("Initializing grabber method...\n");
     initGrabberMethod();
@@ -440,20 +450,23 @@ i++;
       }
     }
 
-    rfbRunEventLoop(vncscr,-1,TRUE);
-
     while (1) {
-      usleep(300000*(standby/2.0));
-
+        usec=vncscr->deferUpdateTime*2000*standby;
+        rfbProcessEvents(vncscr,usec);
+      
       if (idle)
-      standby++;
+        standby++;
       else
-      standby=2;
-
+        standby=2;
+      
       if (vncscr->clientHead == NULL)
-      continue;
+      {
+        idle=1;
+        standby=50;
+        continue;
+      }
 
       update_screen(); 
     }
     close_app();
-    }
+}

@@ -19,6 +19,8 @@ ifeq ($(PLATFORM_SDK_VERSION),9)
 LOCAL_SHARED_LIBRARIES := libsurfaceflinger_client libui libbinder libutils  libcutils #libcrypto libssl libhardware
 else ifeq ($(PLATFORM_SDK_VERSION),10)
 LOCAL_SHARED_LIBRARIES := libsurfaceflinger_client libui libbinder libutils  libcutils #libcrypto libssl libhardware
+else ifeq ($(PLATFORM_SDK_VERSION),14)
+LOCAL_SHARED_LIBRARIES := libgui libui libbinder libcutils
 else ifeq ($(PLATFORM_SDK_VERSION),15)
 LOCAL_SHARED_LIBRARIES := libgui libui libbinder libcutils
 else

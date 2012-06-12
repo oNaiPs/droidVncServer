@@ -1,6 +1,8 @@
 package org.onaips.vnc;
 
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -50,38 +52,34 @@ public class MainApplication extends Application {
 
 		SharedPreferences.Editor editor = prefs.edit();
 		editor.putInt("last_run", versionCode);
-		editor.commit();
+		editor.commit(); 
 		return true;
 	}  
  
 	public void createBinaries()  
 	{  
-		if (Build.VERSION.SDK_INT>Build.VERSION_CODES.FROYO)
-			copyBinary(R.raw.androidvncserver_gingerup , getFilesDir().getAbsolutePath() + "/androidvncserver");
-		else 
-			copyBinary(R.raw.androidvncserver_froyo , getFilesDir().getAbsolutePath() + "/androidvncserver");
-		copyBinary(R.raw.vncviewer, getFilesDir().getAbsolutePath()+"/VncViewer.jar");
-		copyBinary(R.raw.index, getFilesDir().getAbsolutePath()+"/index.vnc");
-
-		copyBinary(R.raw.base64, getFilesDir().getAbsolutePath()+"/base64.js");
-		copyBinary(R.raw.black, getFilesDir().getAbsolutePath()+"/black.css");
-		copyBinary(R.raw.des, getFilesDir().getAbsolutePath()+"/des.js");
-		copyBinary(R.raw.display, getFilesDir().getAbsolutePath()+"/display.js");
-		copyBinary(R.raw.input, getFilesDir().getAbsolutePath()+"/input.js");
-		copyBinary(R.raw.logo, getFilesDir().getAbsolutePath()+"/logo.js");
-		copyBinary(R.raw.novnc, getFilesDir().getAbsolutePath()+"/novnc.html");
-		copyBinary(R.raw.plain, getFilesDir().getAbsolutePath()+"/plain.css");
-		copyBinary(R.raw.playback, getFilesDir().getAbsolutePath()+"/playback.js");
-		copyBinary(R.raw.rfb, getFilesDir().getAbsolutePath()+"/rfb.js");
-		copyBinary(R.raw.self, getFilesDir().getAbsolutePath()+"/self.pem");
-		copyBinary(R.raw.swfobject, getFilesDir().getAbsolutePath()+"/swfobject.js");
-		copyBinary(R.raw.ui, getFilesDir().getAbsolutePath()+"/ui.js.vnc");
-		copyBinary(R.raw.util, getFilesDir().getAbsolutePath()+"/util.js");
-		copyBinary(R.raw.vnc, getFilesDir().getAbsolutePath()+"/vnc.js");
-		copyBinary(R.raw.web_socket, getFilesDir().getAbsolutePath()+"/web_socket.js");
-		copyBinary(R.raw.websock, getFilesDir().getAbsolutePath()+"/websock.js");
-		copyBinary(R.raw.websocketmain, getFilesDir().getAbsolutePath()+"/websocketmain.swf");
-		copyBinary(R.raw.webutil, getFilesDir().getAbsolutePath()+"/webutil.js");
+		String filesdir = getFilesDir().getAbsolutePath()+"/";
+		 
+		//copy the daemon 
+		copyBinary(R.raw.androidvncserver, filesdir + "/androidvncserver");
+		
+		//copy wrapper libs as well 
+		copyBinary(R.raw.libdvnc_flinger_sdk10, filesdir + "/libdvnc_flinger_sdk10.so");
+		copyBinary(R.raw.libdvnc_flinger_sdk14, filesdir + "/libdvnc_flinger_sdk14.so");
+		copyBinary(R.raw.libdvnc_gralloc_sdk10, filesdir + "/libdvnc_gralloc_sdk10.so");
+		copyBinary(R.raw.libdvnc_gralloc_sdk14, filesdir + "/libdvnc_gralloc_sdk14.so");
+				 
+		//copy html related stuff
+		copyBinary(R.raw.webclients, filesdir + "/webclients.zip");
+		 
+		try {
+			ResLoader.unpackResources(R.raw.webclients, getApplicationContext(),filesdir);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 	public void copyBinary(int id,String path)
@@ -102,7 +100,7 @@ public class MainApplication extends Application {
 		}
 		catch (Exception e)
 		{
-			log("public void createBinary(): " + e.getMessage());
+			log("public void createBinary() error! : " + e.getMessage());
 		}
 
 

@@ -45,6 +45,10 @@ void update_fb_info(void)
   }
 }
 
+inline int roundUpToPageSize(int x) {
+  return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
+}
+
 int initFB(void)
 {  
   L("--Initializing framebuffer access method--\n");
@@ -124,8 +128,3 @@ unsigned int *readBufferFB(void)
   update_fb_info();
   return fbmmap;
 }
-
-inline int roundUpToPageSize(int x) {
-  return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
-}
-

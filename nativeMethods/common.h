@@ -75,4 +75,9 @@ void setIdle(int i);
 void close_app();
 screenFormat screenformat;
 
+#define DVNC_FILES_PATH "/data/data/org.onaips.vnc/files/"
+
+#define ARR_LEN(a) (sizeof(a)/sizeof(a)[0])
+static int compiled_sdks[] = {10, 14};
+
 #endif

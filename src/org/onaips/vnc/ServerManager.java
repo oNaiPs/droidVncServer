@@ -1,5 +1,6 @@
 package org.onaips.vnc;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.DatagramPacket;
@@ -73,6 +74,7 @@ public class ServerManager extends Service {
 		// Lets see if i need to boot daemon...
 		try {
 			Process sh;
+			String files_dir = getFilesDir().getAbsolutePath();
 
 			String password = preferences.getString("password", "");
 			String password_check = "";
@@ -109,22 +111,25 @@ public class ServerManager extends Service {
 			if (!preferences.getString("displaymode", "auto").equals("auto"))
 				display_method = "-m " + preferences.getString("displaymode", "auto");
 
-
+			String display_zte="";
+			if (preferences.getBoolean("rotate_zte", false))
+				display_zte = "-z";
+			
 			Runtime.getRuntime().exec(
 					"chmod 777 " + getFilesDir().getAbsolutePath()
 					+ "/androidvncserver");
  
-			boolean root=preferences.getBoolean("asroot",true);
-			String permission_string="chmod 777 " + getFilesDir().getAbsolutePath()+ "/androidvncserver";
-			String server_string=getFilesDir().getAbsolutePath()+ "/androidvncserver " + password_check + " " + rotation+ " " + scaling_string + " " + port_string + " "
-			+ reverse_string + " " + display_method;
+			String permission_string="chmod 777 " + files_dir + "/androidvncserver";
+			String server_string= getFilesDir().getAbsolutePath()+ "/androidvncserver " + password_check + " " + rotation+ " " + scaling_string + " " + port_string + " "
+			+ reverse_string + " " + display_method + " " + display_zte;
  
+			boolean root=preferences.getBoolean("asroot",true);
 			root &= MainActivity.hasRootPermission();
  
 			if (root)     
 			{ 
 				log("Running as root...");
-				sh = Runtime.getRuntime().exec("su");
+				sh = Runtime.getRuntime().exec("su",null,new File(files_dir));
 				OutputStream os = sh.getOutputStream();
 				writeCommand(os, permission_string);
 				writeCommand(os, server_string);
@@ -133,7 +138,7 @@ public class ServerManager extends Service {
 			{
 				log("Not running as root...");
 				Runtime.getRuntime().exec(permission_string);
-				Runtime.getRuntime().exec(server_string);
+				Runtime.getRuntime().exec(server_string,null,new File(files_dir));
 			}
 			// dont show password on logcat
 			log("Starting " + getFilesDir().getAbsolutePath()

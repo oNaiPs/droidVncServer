@@ -437,9 +437,9 @@
 /* #undef LIBVNCSERVER_HAVE_XTESTGRABCONTROL */
 
 /* Enable IPv6 support */
-#ifndef LIBVNCSERVER_IPv6 
+/*#ifndef LIBVNCSERVER_IPv6 
 #define LIBVNCSERVER_IPv6  1 
-#endif
+#endif*/
 
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */

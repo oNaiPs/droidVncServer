@@ -33,10 +33,21 @@ int initGralloc(void)
 {
   L("--Loading gralloc native lib--\n");
 
-  gralloc_lib = dlopen("/data/libdvnc_gralloc_sdk14.so", RTLD_NOW);
-  if(gralloc_lib == NULL) {
-    L("Couldnt load library! Error string: %s\n",dlerror());
-    return -1;
+  int i,len;
+  char lib_name[64];
+
+  len=ARR_LEN(compiled_sdks);
+  for (i=0;i<len;i++) {
+    sprintf(lib_name, DVNC_FILES_PATH "/libdvnc_gralloc_sdk%d.so",compiled_sdks[i]); 
+    L("Loading lib: %s\n",lib_name);
+    
+    gralloc_lib = dlopen(lib_name, RTLD_NOW);
+    if (gralloc_lib != NULL)
+      break;
+    else if(i+1 == len) {
+      L("Couldnt load library! Error string: %s\n",dlerror());
+      return -1;
+    }
   }
 
   init_fn_type init_gralloc = dlsym(gralloc_lib,"init_gralloc");

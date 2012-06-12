@@ -65,13 +65,14 @@ extern "C" int init_flinger()
 
 	L("--Initializing gingerbread access method--\n");
 
-  screenshotClient=new ScreenshotClient();
-	errno=screenshotClient->update();
-	if (errno != NO_ERROR) {
-		L("screen capture failed: %s\n", strerror(-errno));
+  screenshotClient = new ScreenshotClient();
+	errno = screenshotClient->update();
+  if (!screenshotClient->getPixels())
+    return -1;
+
+  if (errno != NO_ERROR) {
 		return -1;
 	}
-
 	return 0;
 }
 

@@ -71,6 +71,6 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_STATIC_LIBRARIES := libjpeg libpng libssl_static libcrypto_static
 
-LOCAL_MODULE:= androidvncserver
+LOCAL_MODULE := androidvncserver
 
 include $(BUILD_EXECUTABLE)
