@@ -17,7 +17,6 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- The stateful background drawable for a widget -->
     <item android:state_window_focused="false" android:drawable="@drawable/btnstop_normal" />
-    <item android:state_pressed="true" android:drawable="@drawable/btnstop_pressed" />
     <item android:state_focused="true" android:drawable="@drawable/btnstop_normal" />
     <item android:drawable="@drawable/btnstop_normal" />
 </selector>

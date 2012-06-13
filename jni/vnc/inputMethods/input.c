@@ -48,7 +48,7 @@ void initInput()
     1 /* Version id. */
   }; 
 
-  if((inputfd = suinput_open("qwerty", &id)) == -1)
+  if((inputfd = suinput_open("Generic", &id)) == -1)
   {
     L("cannot create virtual kbd device.\n");
     sendMsgToGui("~SHOW|Cannot create virtual input device!\n");
@@ -199,6 +199,9 @@ void keyEvent(rfbBool down, rfbKeySym key, rfbClientPtr cl)
   int sh = 0;
   int alt = 0;
 
+  if ( inputfd == -1 )
+    return;
+
   if ((code = keysym2scancode(down, key, cl,&sh,&alt)))
   {
 
@@ -228,6 +231,10 @@ void ptrEvent(int buttonMask, int x, int y, rfbClientPtr cl)
 {
 
   static int leftClicked=0,rightClicked=0,middleClicked=0;
+
+  if ( inputfd == -1 )
+    return;
+  
   setIdle(0);
   transformTouchCoordinates(&x,&y,cl->screen->width,cl->screen->height);
 

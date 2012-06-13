@@ -20,8 +20,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define OUT_T CONCAT3E(uint,OUT,_t)
 #define FUNCTION CONCAT2E(update_screen_,OUT)
 
-
-
 void FUNCTION(void)
 {  
   int i,j,r;
@@ -47,6 +45,9 @@ void FUNCTION(void)
     b = (OUT_T*) readBufferFlinger();
 
   a = (OUT_T*)cmpbuf;
+//  memcpy(vncbuf,b,screenformat.width*screenformat.height*screenformat.bitsPerPixel/CHAR_BIT);
+//  rfbMarkRectAsModified(vncscr, 0, 0, vncscr->width, vncscr->height);
+//  return;
 
   int max_x=-1,max_y=-1, min_x=99999, min_y=99999;
   int h;
@@ -178,7 +179,7 @@ void FUNCTION(void)
     max_x++;
     max_y++;
 
-    //        L("Changed x(%d-%d) y(%d-%d)\n",min_x,max_x,min_y,max_y);
+          //  L("Changed x(%d-%d) y(%d-%d)\n",min_x,max_x,min_y,max_y);
 
     rfbMarkRectAsModified(vncscr, min_x, min_y, max_x, max_y);
   }

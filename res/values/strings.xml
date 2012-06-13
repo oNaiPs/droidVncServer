@@ -59,5 +59,6 @@ Device model: <xliff:g id="device_model">%s</xliff:g>\n
 Firmware version: <xliff:g id="firmware_revision">%s</xliff:g>\n
 Kernel version: <xliff:g id="kernel_version">%s</xliff:g>\n
 Build number: <xliff:g id="build_number">%s</xliff:g>\n
+CPU ABI: <xliff:g id="cpu_abi">%s</xliff:g>\n
 </string>       
 </resources>

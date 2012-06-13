@@ -183,6 +183,7 @@ void initVncServer(int argc, char **argv)
   vncscr->serverFormat.greenMax = (( 1 << screenformat.greenMax) -1);
   vncscr->serverFormat.blueMax = (( 1 << screenformat.blueMax) -1);
 
+  vncscr->serverFormat.trueColour = TRUE; 
   vncscr->serverFormat.bitsPerPixel = screenformat.bitsPerPixel;
 
   vncscr->alwaysShared = TRUE;
@@ -335,6 +336,8 @@ void printUsage(char **argv)
 }
 
 
+#include <time.h>
+
 int main(int argc, char **argv)
 {
   //pipe signals
@@ -450,12 +453,14 @@ int main(int argc, char **argv)
       }
     }
 
+
     while (1) {
-        usec=vncscr->deferUpdateTime*2000*standby;
+        usec=(vncscr->deferUpdateTime+standby)*1000;
+        //clock_t start = clock();
         rfbProcessEvents(vncscr,usec);
       
       if (idle)
-        standby++;
+        standby+=2;
       else
         standby=2;
       
@@ -467,6 +472,7 @@ int main(int argc, char **argv)
       }
 
       update_screen(); 
+      //printf ( "%f\n", ( (double)clock() - start )*1000 / CLOCKS_PER_SEC );
     }
     close_app();
 }

@@ -16,18 +16,18 @@ import android.util.Log;
 
 public class MainApplication extends Application {
 
+ 
 
-
-	@Override
+	@Override 
 	public void onCreate() {
 		super.onCreate(); 
-		if (firstRun()) 
+		//if (firstRun()) 
 			createBinaries();
-	} 
-
+	}    
+ 
 	public void log(String s)
 	{ 
-		Log.v(MainActivity.VNC_LOG,s);
+		Log.v(MainActivity.VNC_LOG,s); 
 	}
 
 	public boolean firstRun()
@@ -54,21 +54,12 @@ public class MainApplication extends Application {
 		editor.putInt("last_run", versionCode);
 		editor.commit(); 
 		return true;
-	}  
+	}   
  
 	public void createBinaries()  
-	{  
+	{   
 		String filesdir = getFilesDir().getAbsolutePath()+"/";
-		 
-		//copy the daemon 
-		copyBinary(R.raw.androidvncserver, filesdir + "/androidvncserver");
-		
-		//copy wrapper libs as well 
-		copyBinary(R.raw.libdvnc_flinger_sdk10, filesdir + "/libdvnc_flinger_sdk10.so");
-		copyBinary(R.raw.libdvnc_flinger_sdk14, filesdir + "/libdvnc_flinger_sdk14.so");
-		copyBinary(R.raw.libdvnc_gralloc_sdk10, filesdir + "/libdvnc_gralloc_sdk10.so");
-		copyBinary(R.raw.libdvnc_gralloc_sdk14, filesdir + "/libdvnc_gralloc_sdk14.so");
-				 
+ 
 		//copy html related stuff
 		copyBinary(R.raw.webclients, filesdir + "/webclients.zip");
 		 
@@ -102,14 +93,10 @@ public class MainApplication extends Application {
 		{
 			log("public void createBinary() error! : " + e.getMessage());
 		}
-
-
 	}  
 
 	static void writeCommand(OutputStream os, String command) throws Exception
 	{
 		os.write((command + "\n").getBytes("ASCII"));
 	} 
-
-
 }

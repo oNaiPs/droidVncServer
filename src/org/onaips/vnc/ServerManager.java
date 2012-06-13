@@ -52,22 +52,30 @@ public class ServerManager extends Service {
 		}
 
 	}
+ 
 
-
+	//for pre-2.0 devices
+	@Override
+	public void onStart(Intent intent, int startId) {
+		handleStart();
+	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-
-		log("onStartCommand(Intent intent, int flags, int startId) {");
+		handleStart();
+		return START_NOT_STICKY;
+	}
+	
+	private void handleStart()
+	{
+		log("ServerManager::handleStart");
 
 		Boolean startdaemon = preferences.getBoolean("startdaemononboot",
 				false);
 		log("Let me see if we need to start daemon..."
 				+ (startdaemon ? "Yes" : "No"));
 		if (startdaemon)
-			startServer();
-
-		return super.onStartCommand(intent, flags, startId);
+			startServer();		
 	}
 
 	public void startServer() {
@@ -115,12 +123,22 @@ public class ServerManager extends Service {
 			if (preferences.getBoolean("rotate_zte", false))
 				display_zte = "-z";
 			
-			Runtime.getRuntime().exec(
-					"chmod 777 " + getFilesDir().getAbsolutePath()
-					+ "/androidvncserver");
+			//our exec file is disguised as a library so it will get packed to lib folder according to cpu_abi
+			String droidvncserver_exec=getFilesDir().getParent() + "/lib/libandroidvncserver.so";
+			File f=new File (droidvncserver_exec);
+			if (!f.exists())
+			{
+				String e="Error! Could not find daemon file, " + droidvncserver_exec;
+				showTextOnScreen(e);
+				log(e);
+				return;
+			}
+			
+			
+			Runtime.getRuntime().exec("chmod 777 " + droidvncserver_exec);
  
-			String permission_string="chmod 777 " + files_dir + "/androidvncserver";
-			String server_string= getFilesDir().getAbsolutePath()+ "/androidvncserver " + password_check + " " + rotation+ " " + scaling_string + " " + port_string + " "
+			String permission_string="chmod 777 " + droidvncserver_exec;
+			String server_string= droidvncserver_exec  + " " + password_check + " " + rotation+ " " + scaling_string + " " + port_string + " "
 			+ reverse_string + " " + display_method + " " + display_zte;
  
 			boolean root=preferences.getBoolean("asroot",true);
@@ -141,9 +159,8 @@ public class ServerManager extends Service {
 				Runtime.getRuntime().exec(server_string,null,new File(files_dir));
 			}
 			// dont show password on logcat
-			log("Starting " + getFilesDir().getAbsolutePath()
-					+ "/androidvncserver " + " " + rotation + " "
-					+ scaling_string + " " + port_string + " " + display_method);
+			log("Starting " + droidvncserver_exec  + " " + rotation+ " " + scaling_string + " " + port_string + " "
+					+ reverse_string + " " + display_method + " " + display_zte);
 
 		} catch (IOException e) {
 			log("startServer():" + e.getMessage());
@@ -185,6 +202,9 @@ public class ServerManager extends Service {
 		}
 	}
 
+	
+	
+	
 	public static boolean isServerRunning() {
 		try {
 			byte[] receiveData = new byte[1024];

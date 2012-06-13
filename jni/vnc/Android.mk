@@ -40,7 +40,9 @@ LIBVNCSERVER_SRC_FILES:= \
 LOCAL_CFLAGS  +=  -Wall \
 									-O3 \
 									-DLIBVNCSERVER_WITH_WEBSOCKETS \
-									-DLIBVNCSERVER_HAVE_LIBPNG
+									-DLIBVNCSERVER_HAVE_LIBPNG \
+									-DLIBVNCSERVER_HAVE_ZLIB \
+									-DLIBVNCSERVER_HAVE_LIBJPEG
 
 LOCAL_LDLIBS +=  -llog -lz -ldl 
 
@@ -62,6 +64,7 @@ LOCAL_C_INCLUDES += \
 										$(LOCAL_PATH)/suinput \
 										$(LOCAL_PATH)/../libpng \
 										$(LOCAL_PATH)/../jpeg \
+										$(LOCAL_PATH)/../jpeg-turbo \
 										$(LOCAL_PATH)/../openssl/include \
 										$(LOCAL_PATH)/$(LIBVNCSERVER_ROOT)/libvncserver \
 										$(LOCAL_PATH)/$(LIBVNCSERVER_ROOT)/common \

@@ -38,55 +38,56 @@ int initGralloc(void)
 
   len=ARR_LEN(compiled_sdks);
   for (i=0;i<len;i++) {
-    sprintf(lib_name, DVNC_FILES_PATH "/libdvnc_gralloc_sdk%d.so",compiled_sdks[i]); 
+    sprintf(lib_name, DVNC_LIB_PATH "/libdvnc_gralloc_sdk%d.so",compiled_sdks[i]); 
     L("Loading lib: %s\n",lib_name);
     
+    if (gralloc_lib) //remove previous instance
+      dlclose(gralloc_lib);
     gralloc_lib = dlopen(lib_name, RTLD_NOW);
-    if (gralloc_lib != NULL)
-      break;
-    else if(i+1 == len) {
-      L("Couldnt load library! Error string: %s\n",dlerror());
-      return -1;
+    if (gralloc_lib == NULL) {
+      L("Couldnt load library %s! Error string: %s\n",lib_name, dlerror());
+      continue;
     }
+
+    init_fn_type init_gralloc = dlsym(gralloc_lib,"init_gralloc");
+    if(init_gralloc == NULL) {
+      L("Couldn't load init_gralloc! Error string: %s\n",dlerror());
+      continue;
+    }
+
+    close_gralloc = dlsym(gralloc_lib,"close_gralloc");
+    if(close_gralloc == NULL) {
+      L("Couldn't load close_gralloc! Error string: %s\n",dlerror());
+      continue;
+    }
+
+    readfb_gralloc = dlsym(gralloc_lib,"readfb_gralloc");
+    if(readfb_gralloc == NULL) {
+      L("Couldn't load readfb_gralloc! Error string: %s\n",dlerror());
+      continue;
+    }
+
+    getscreenformat_gralloc = dlsym(gralloc_lib,"getscreenformat_gralloc");
+    if(getscreenformat_gralloc == NULL) {
+      L("Couldn't load get_screenformat! Error string: %s\n",dlerror());
+      continue;
+    }
+
+    int ret = init_gralloc();
+    if (ret == -1) {
+      L("Gralloc method not supported by this device!\n");
+      continue;
+    }
+
+    screenformat = getScreenFormatGralloc();
+    if ( screenformat.width <= 0 ) {
+      L("Error: I have received a bad screen size from gralloc.\n");
+      continue;
+    }
+    return 0;
   }
 
-  init_fn_type init_gralloc = dlsym(gralloc_lib,"init_gralloc");
-  if(init_gralloc == NULL) {
-    L("Couldn't load init_gralloc! Error string: %s\n",dlerror());
-    return -1;
-  }
-
-  close_gralloc = dlsym(gralloc_lib,"close_gralloc");
-  if(close_gralloc == NULL) {
-    L("Couldn't load close_gralloc! Error string: %s\n",dlerror());
-    return -1;
-  }
-
-  readfb_gralloc = dlsym(gralloc_lib,"readfb_gralloc");
-  if(readfb_gralloc == NULL) {
-    L("Couldn't load readfb_gralloc! Error string: %s\n",dlerror());
-    return -1;
-  }
-
-  getscreenformat_gralloc = dlsym(gralloc_lib,"getscreenformat_gralloc");
-  if(getscreenformat_gralloc == NULL) {
-    L("Couldn't load get_screenformat! Error string: %s\n",dlerror());
-    return -1;
-  }
-
-  int ret = init_gralloc();
-  if (ret == -1) {
-  L("Gralloc method not supported by this device!\n");
   return -1;
-  }
-
-  screenformat = getScreenFormatGralloc();
-  if ( screenformat.width <= 0 ) {
-    L("Error: I have received a bad screen size from gralloc.\n");
-    return -1;
-  }
-
-  return 0;
 }
 
 screenFormat getScreenFormatGralloc(void)

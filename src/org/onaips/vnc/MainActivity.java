@@ -355,7 +355,7 @@ public class MainActivity extends Activity
 			b.setBackgroundDrawable(getResources().getDrawable(R.drawable.btnstop_normal));
 			b2.setVisibility(View.VISIBLE);
 
-		}
+		} 
 		else
 		{
 			t.setText("");
@@ -627,7 +627,7 @@ public class MainActivity extends Activity
 					intent.putExtra(EXTRA_DATA, Uri.parse("mailto:" + email));
 					intent.putExtra(EXTRA_ADDITIONAL_INFO,"Problem Description: \n\n\n\n---------DEBUG--------\n" + 
 					getString(R.string.device_info_fmt,getVersionNumber(getApplicationContext()),Build.MODEL,Build.VERSION.RELEASE, 
-							getFormattedKernelVersion(), Build.DISPLAY));
+							getFormattedKernelVersion(), Build.DISPLAY,Build.CPU_ABI));
 					intent.putExtra(Intent.EXTRA_SUBJECT, "droid VNC server: Debug Info");
 					intent.putExtra(EXTRA_FORMAT, "time");
 
@@ -720,8 +720,6 @@ public class MainActivity extends Activity
 		}
 	};
 
-
-
 	static File findExecutableOnPath(String executableName)  
 	{  
 
@@ -740,6 +738,4 @@ public class MainActivity extends Activity
 		}  
 		return fullyQualifiedExecutable;  
 	}
-
-
 }

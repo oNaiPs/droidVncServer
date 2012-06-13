@@ -1,4 +1,9 @@
-v1.1a
+v1.1RC1
+- Changed libpng and libjpeg to more recent SIMD optimized.
+- Fixed bug on gralloc and flinger loading.
+- x86 and MIPS support added!
+
+v1.1RC0
 
 - ICS support
 - Changed to official libvncserver v0.9.9.

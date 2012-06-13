@@ -17,7 +17,7 @@ Connects to the daemon using local IPC.
 -------------- Compile C daemon ---------------------
 On project folder:
   $ ndk-build
-  $ mv libs/armeabi/androidvncserver /res/raw/androidvncserver.mp3 :O mp3 overcomes the 1MB limitation on some resources
+  $ ./updateExecsAndLibs.sh
 
 -------------- Compile Wrapper libs -----------------
   $ cd <aosp_folder>
@@ -26,9 +26,10 @@ On project folder:
   $ ln -s <droid-vnc-folder>/nativeMethods/ external/
 
 To build:
-  $ mm external/nativeMethods
-  $ cp <droid-vnc-folder>/nativeMethods/lib/* <droid-vnc-folder>/res/raw
-
+  $ cd external/nativeMethods
+  $ mm .
+  $ cd <droid-vnc-folder>
+  $ ./updateExecsAndLibs.sh
 
 -------------- Compile GUI------- -------------------
 Import using eclipse as a regular Android project
