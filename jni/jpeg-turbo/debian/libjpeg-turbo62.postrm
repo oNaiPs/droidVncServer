@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+HOST_MULTIARCH=`dpkg-architecture -qDEB_HOST_MULTIARCH`
+
+if [ remove = "$1" -o abort-install = "$1" -o disappear = "$1" ];
+then
+	dpkg-divert --package libjpeg-turbo62 --rename \
+		--remove /usr/lib/$HOST_MULTIARCH/libjpeg.so.62.0.0
+	dpkg-divert --package libjpeg-turbo62 --rename \
+		--remove /usr/lib/$HOST_MULTIARCH/libjpeg.so.62
+	rmdir /usr/lib/libjpeg-divert
+fi
+
+#DEBHELPER#

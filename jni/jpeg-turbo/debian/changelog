@@ -1,0 +1,72 @@
+libjpeg-turbo (1.1.90-1inaror6) unreleased; urgency=low
+
+  * sync to change 691
+  * 690 NEON-accelerated slow integer inverse DCT
+  * 691 Improve the performance of YCbCr to RGB conversion on ARM
+
+ -- Tom Gall <tom.gall@linaro.org>  Thu, 25 Aug 2011 18:38:04 +0000
+
+libjpeg-turbo (1.1.90-1inaro6) natty; urgency=low
+
+  * Release
+  * sync to svn change 689
+
+ -- Tom Gall <tom.gall@linaro.org>  Tue, 16 Aug 2011 22:58:35 +0000
+
+libjpeg-turbo (1.1.1-1inaro5) unreleased; urgency=low
+
+  * Merge in 1.1.90 upstream code 
+
+ -- Tom Gall <tom.gall@linaro.org>  Mon, 15 Aug 2011 23:34:51 +0000
+
+libjpeg-turbo (1.1.1-1inaro4) natty; urgency=low
+
+  * add libjpeg-turbo-progs.* to handle collision with libjpeg-8
+  * add dpkg-dev to Pre-Depends so multi-host works during builds
+
+ -- Tom Gall <tom.gall@linaro.org>  Mon, 01 Aug 2011 18:48:55 +0000
+
+libjpeg-turbo (1.1.1-1inaro3) natty; urgency=low
+
+  * fix divert to correctly move libjpeg.so*
+  * use multiarch
+  * change location of upstream git tree
+
+ -- Tom Gall <tom.gall@linaro.org>  Thu, 28 Jul 2011 04:34:05 +0000
+
+libjpeg-turbo (1.1.1-1inaro2) natty; urgency=low
+
+  * release
+  * add timestamp code to cjpeg.c
+  * default cjpeg.c and djpeg.c timestamp code to off
+
+ -- Tom Gall <tom.gall@linaro.org>  Mon, 11 Jul 2011 20:32:23 +0000
+
+libjpeg-turbo (1.1.1-0inaro1) natty; urgency=low
+
+  * rebase to 1.1.1
+  * include cross build changes from Michael Edwards
+  * add assembler and compiler options for SIMD_ARM_NEON
+
+ -- Tom Gall <tom.gall@linaro.org>  Tue, 05 Jul 2011 21:20:43 +0000
+
+libjpeg-turbo (1.1.0-0inaro2) natty; urgency=low
+
+  * Package current git, dated 05262011
+
+ --  <tom.gall@linaro.org>  Thu, 26 May 2011 20:23:01 +0000
+
+libjpeg-turbo (1.1.0-0linaro1) natty; urgency=low
+
+  * Change name of built packages to libjpeg-turbo62 and libjpeg-turbo-progs
+  * fix dpkg-divert usage
+  * Don't bother to install libjpegturbo.so
+  * via Steve Langasek, fix use of strh with it ne for thumb2 gcc4.5 compat
+
+ -- Tom Gall <tom.gall@linaro.org>  Fri, 04 Mar 2011 22:51:19 -0600
+
+libjpeg-turbo (1.1.0-0linaro0) natty; urgency=low
+
+  * Package for Linaro
+
+ -- Tom Gall <tom.gall@linaro.org>  Mon, 17 Jan 2011 11:11:05 -0600

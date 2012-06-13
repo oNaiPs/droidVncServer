@@ -1,0 +1,41 @@
+#!/bin/sh 
+
+set -e
+
+HOST_MULTIARCH=`dpkg-architecture -qDEB_HOST_MULTIARCH`
+
+if [ install = "$1" ] || dpkg --compare-versions "$2" lt 1.1.1-1linaro3; then
+	if [ ! -d /usr/share/man/libjpeg-progs-divert ] 
+        then
+		mkdir -p /usr/share/man/libjpeg-progs-divert
+        fi
+
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/share/man/libjpeg-progs-divert/wrjpgcom.1.gz \
+                --add /usr/share/man/man1/wrjpgcom.1.gz 
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/share/man/libjpeg-progs-divert/cjpeg.1.gz \
+                --add /usr/share/man/man1/cjpeg.1.gz 
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/share/man/libjpeg-progs-divert/djpeg.1.gz \
+                --add /usr/share/man/man1/djpeg.1.gz 
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/share/man/libjpeg-progs-divert/rdjpgcom.1.gz \
+                --add /usr/share/man/man1/rdjpgcom.1.gz
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/share/man/libjpeg-progs-divert/jpegtran.1.gz \
+                --add /usr/share/man/man1/jpegtran.1.gz
+
+	if [ ! -d /usr/bin/libjpeg-progs-divert ] 
+        then
+		mkdir -p /usr/bin/libjpeg-progs-divert
+        fi
+
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/bin/libjpeg-progs-divert/rdjpgcom \
+		--add /usr/bin/rdjpgcom
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/bin/libjpeg-progs-divert/wrjpgcom \
+		--add /usr/bin/wrjpgcom
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/bin/libjpeg-progs-divert/jpegtranm \
+		--add /usr/bin/jpegtran
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/bin/libjpeg-progs-divert/cjpeg \
+		--add /usr/bin/cjpeg
+ 	dpkg-divert --package libjpeg-turbo-progs --rename --divert /usr/bin/libjpeg-progs-divert/djpeg \
+		--add /usr/bin/djpeg
+fi
+
+#DEBHELPER#

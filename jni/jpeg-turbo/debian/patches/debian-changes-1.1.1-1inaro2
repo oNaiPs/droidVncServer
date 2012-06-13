@@ -1,0 +1,3508 @@
+Description: Upstream changes introduced in version 1.1.1-1inaro2
+ This patch has been created by dpkg-source during the package build.
+ Here's the last changelog entry, hopefully it gives details on why
+ those changes were made:
+ .
+ libjpeg-turbo (1.1.1-1inaro2) natty; urgency=low
+ .
+   * release
+   * add timestamp code to cjpeg.c
+   * default cjpeg.c and djpeg.c timestamp code to off
+ .
+ The person named in the Author field signed this changelog entry.
+Author: Tom Gall <tom.gall@linaro.org>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- libjpeg-turbo-1.1.1.orig/jdcolor.c
++++ libjpeg-turbo-1.1.1/jdcolor.c
+@@ -159,6 +159,106 @@ ycc_rgb_convert (j_decompress_ptr cinfo,
+   }
+ }
+ 
++/*
++ * Convert cmyk to rgb
++ */
++METHODDEF(void)
++cmyk_rgb_convert (j_decompress_ptr cinfo,
++		 JSAMPIMAGE input_buf, JDIMENSION input_row,
++		 JSAMPARRAY output_buf, int num_rows)
++{
++  double c, m, y, k;
++  register JSAMPROW outptr;
++  register JSAMPROW inptr0, inptr1, inptr2, inptr3;
++  register JDIMENSION col;
++
++  JDIMENSION num_cols = cinfo->output_width;
++
++  while (--num_rows >= 0) {
++    inptr0 = input_buf[0][input_row];
++    inptr1 = input_buf[1][input_row];
++    inptr2 = input_buf[2][input_row];
++    inptr3 = input_buf[3][input_row];
++    input_row++;
++    outptr = *output_buf++;
++    for (col = 0; col < num_cols; col++) {
++	c = (double) GETJSAMPLE(inptr0[col]);
++	m = (double) GETJSAMPLE(inptr1[col]);
++	y = (double) GETJSAMPLE(inptr2[col]);
++	k = (double) GETJSAMPLE(inptr3[col]);
++
++    outptr[RGB_RED] =   (JSAMPLE)(c*k/255);
++    outptr[RGB_GREEN] = (JSAMPLE)(m*k/255);
++    outptr[RGB_BLUE] =  (JSAMPLE)(y*k/255);
++    outptr += RGB_PIXELSIZE;
++    }
++  }
++}
++
++/*
++ * Convert YCCK to RGB
++ */
++METHODDEF(void)
++ycck_rgb_convert (j_decompress_ptr cinfo,
++		   JSAMPIMAGE input_buf, JDIMENSION input_row,
++		   JSAMPARRAY output_buf, int num_rows)
++{
++  my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
++  double cyan, magenta, yellow, black;
++  register int y, cb, cr;
++  register JSAMPROW outptr;
++  register JSAMPROW inptr0, inptr1, inptr2, inptr3;
++  register JDIMENSION col;
++  JDIMENSION num_cols = cinfo->output_width;
++
++  /* copy these pointers into registers if possible */
++  register JSAMPLE * range_limit = cinfo->sample_range_limit;
++  register int * Crrtab = cconvert->Cr_r_tab;
++  register int * Cbbtab = cconvert->Cb_b_tab;
++  register INT32 * Crgtab = cconvert->Cr_g_tab;
++  register INT32 * Cbgtab = cconvert->Cb_g_tab;
++  SHIFT_TEMPS
++
++  while (--num_rows >= 0) {
++    inptr0 = input_buf[0][input_row];
++    inptr1 = input_buf[1][input_row];
++    inptr2 = input_buf[2][input_row];
++    inptr3 = input_buf[3][input_row];
++    input_row++;
++    outptr = *output_buf++;
++    for (col = 0; col < num_cols; col++) {
++
++
++      /********* Read YCCK Pixel **********/ 
++      y     = GETJSAMPLE(inptr0[col]);
++      cb    = GETJSAMPLE(inptr1[col]);
++      cr    = GETJSAMPLE(inptr2[col]);
++	  black = (double)GETJSAMPLE(inptr3[col]);
++
++      /********* Convert  YCCK to CMYK  **********/ 
++        /* Range-limiting is essential due to noise introduced by DCT losses. */
++      outptr[0] = range_limit[MAXJSAMPLE - (y + Crrtab[cr])];
++      outptr[1] = range_limit[MAXJSAMPLE - (y +
++			      ((int) RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr], SCALEBITS)))];
++      outptr[2] = range_limit[MAXJSAMPLE - (y + Cbbtab[cb])];
++	  /* K passes through unchanged */
++      outptr[3] = inptr3[col];	/* don't need GETJSAMPLE here */
++
++	  cyan 		= (double)GETJSAMPLE(outptr[0]);
++	  magenta 	= (double)GETJSAMPLE(outptr[1]);
++	  yellow 	= (double)GETJSAMPLE(outptr[2]);
++      //Black is same as in YCCK input
++      
++      /********* Convert  CMYK to RGB  **********/ 
++      outptr[RGB_RED] 	= (JSAMPLE)(cyan*black/255);
++      outptr[RGB_GREEN] = (JSAMPLE)(magenta*black/255);
++      outptr[RGB_BLUE] 	= (JSAMPLE)(yellow*black/255);
++
++      outptr += RGB_PIXELSIZE;
++    }
++  }
++}
++
+ 
+ /**************** Cases other than YCbCr -> RGB **************/
+ 
+@@ -377,6 +477,11 @@ jinit_color_deconverter (j_decompress_pt
+         cconvert->pub.color_convert = ycc_rgb_convert;
+         build_ycc_rgb_table(cinfo);
+       }
++    } else if (cinfo->jpeg_color_space == JCS_CMYK) {
++      cconvert->pub.color_convert = cmyk_rgb_convert;
++    } else if (cinfo->jpeg_color_space == JCS_YCCK) {
++      cconvert->pub.color_convert = ycck_rgb_convert;
++      build_ycc_rgb_table(cinfo);
+     } else if (cinfo->jpeg_color_space == JCS_GRAYSCALE) {
+       cconvert->pub.color_convert = gray_rgb_convert;
+     } else if (cinfo->jpeg_color_space == cinfo->out_color_space &&
+--- libjpeg-turbo-1.1.1.orig/cjpeg.c
++++ libjpeg-turbo-1.1.1/cjpeg.c
+@@ -40,6 +40,28 @@
+ #endif
+ 
+ 
++
++#ifdef PROFILE_ENCODING
++#include <time.h>
++
++#define  TIMER_DEFINE_VARS  struct timespec starttime, endtime;
++#define  TIMER_GETDIFF_MS() (long)( (endtime.tv_sec - starttime.tv_sec)*1000 + (endtime.tv_nsec - starttime.tv_nsec)/1000000)
++#define  TIMER_START do { clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &starttime); } while (0)
++#define  TIMER_STOP do { clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &endtime); } while (0)
++#define  TIMER_PRINT(...) fprintf(stderr, __VA_ARGS__)
++
++#else
++
++#define TIMER_DEFINE_VARS do {} while (0)
++#define TIMER_GETDIFF_MS do {} while (0)
++#define TIMER_START do {} while (0)
++#define TIMER_STOP do {} while (0)
++#define TIMER_PRINT(...) do {} while (0)
++
++#endif
++
++
++
+ /* Create the add-on message string table. */
+ 
+ #define JMESSAGE(code,string)	string ,
+@@ -575,6 +597,10 @@ main (int argc, char **argv)
+   /* Specify data destination for compression */
+   jpeg_stdio_dest(&cinfo, output_file);
+ 
++
++  TIMER_DEFINE_VARS;
++  TIMER_START;
++
+   /* Start compressor */
+   jpeg_start_compress(&cinfo, TRUE);
+ 
+@@ -589,6 +615,10 @@ main (int argc, char **argv)
+   jpeg_finish_compress(&cinfo);
+   jpeg_destroy_compress(&cinfo);
+ 
++
++  TIMER_STOP;
++  TIMER_PRINT("Encoding took %d ms\n", TIMER_GETDIFF_MS());
++
+   /* Close files, if we opened them */
+   if (input_file != stdin)
+     fclose(input_file);
+--- libjpeg-turbo-1.1.1.orig/configure.ac
++++ libjpeg-turbo-1.1.1/configure.ac
+@@ -19,6 +19,7 @@ AC_PROG_CC
+ AC_PROG_INSTALL
+ AC_PROG_LIBTOOL
+ AC_PROG_LN_S
++AM_PROG_AS
+ 
+ # Check whether compiler supports pointers to undefined structures
+ AC_MSG_CHECKING(whether compiler supports pointers to undefined structures)
+@@ -164,7 +165,7 @@ if test "x$VERSION_SCRIPT_FLAG" = "x"; t
+   VERSION_SCRIPT=no
+   AC_MSG_RESULT(no)
+ fi
+-LDFLAGS="$SAVED_LDFLAGS"
++LDFLAGS="$SAVED_LDFLAGS -lrt"
+ 
+ AC_MSG_CHECKING([whether to use version script when building libjpeg-turbo])
+ AC_MSG_RESULT($VERSION_SCRIPT)
+@@ -213,6 +214,10 @@ if test "x${with_simd}" != "xno"; then
+       AC_PROG_NASM
+       simd_arch=i386
+     ;;
++    arm*)
++      AC_MSG_RESULT([yes (ARM_NEON)])
++      simd_arch=arm_neon
++   ;;
+     *)
+       AC_MSG_RESULT([no ("$host_cpu")])
+       AC_MSG_WARN([SIMD support not available for this CPU.  Performance will suffer.])
+@@ -228,6 +233,7 @@ fi
+ AM_CONDITIONAL([WITH_SIMD], [test "x$with_simd" != "xno"])
+ AM_CONDITIONAL([SIMD_I386], [test "x$simd_arch" = "xi386"])
+ AM_CONDITIONAL([SIMD_X86_64], [test "x$simd_arch" = "xx86_64"])
++AM_CONDITIONAL([SIMD_ARM_NEON], [test "x$simd_arch" = "xarm_neon"])
+ AM_CONDITIONAL([X86_64], [test "x$host_cpu" = "xx86_64" -o "x$host_cpu" = "xamd64"])
+ 
+ case "$host_cpu" in
+@@ -239,6 +245,10 @@ case "$host_cpu" in
+     RPMARCH=i386
+     DEBARCH=i386
+     ;;
++  armv7l)
++    RPMARCH=armel
++    DEBARCH=armel
++    ;;
+ esac
+ 
+ AC_SUBST(RPMARCH)
+--- libjpeg-turbo-1.1.1.orig/djpeg.c
++++ libjpeg-turbo-1.1.1/djpeg.c
+@@ -50,6 +50,24 @@ static const char * const cdjpeg_message
+   NULL
+ };
+ 
++#ifdef PROFILE_DECODING
++#include <time.h>
++
++#define  TIMER_DEFINE_VARS  struct timespec starttime, endtime;
++#define  TIMER_GETDIFF_MS() (long)( (endtime.tv_sec - starttime.tv_sec)*1000 + (endtime.tv_nsec - starttime.tv_nsec)/1000000)
++#define  TIMER_START do { clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &starttime); } while (0)
++#define  TIMER_STOP do { clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &endtime); } while (0)
++#define  TIMER_PRINT(...) fprintf(stderr, __VA_ARGS__)
++
++#else
++
++#define TIMER_DEFINE_VARS do {} while (0)
++#define TIMER_GETDIFF_MS do {} while (0)
++#define TIMER_START do {} while (0)
++#define TIMER_STOP do {} while (0)
++#define TIMER_PRINT(...) do {} while (0)
++
++#endif
+ 
+ /*
+  * This list defines the known output image formats
+@@ -539,6 +557,11 @@ main (int argc, char **argv)
+   /* Adjust default decompression parameters by re-parsing the options */
+   file_index = parse_switches(&cinfo, argc, argv, 0, TRUE);
+ 
++  if ((cinfo.jpeg_color_space == JCS_CMYK) ||
++      (cinfo.jpeg_color_space == JCS_YCCK)) {
++    cinfo.out_color_space = JCS_RGB;
++  }
++
+   /* Initialize the output module now to let it override any crucial
+    * option settings (for instance, GIF wants to force color quantization).
+    */
+@@ -583,6 +606,9 @@ main (int argc, char **argv)
+   /* Write output file header */
+   (*dest_mgr->start_output) (&cinfo, dest_mgr);
+ 
++  TIMER_DEFINE_VARS;
++  TIMER_START;
++
+   /* Process data */
+   while (cinfo.output_scanline < cinfo.output_height) {
+     num_scanlines = jpeg_read_scanlines(&cinfo, dest_mgr->buffer,
+@@ -590,6 +616,9 @@ main (int argc, char **argv)
+     (*dest_mgr->put_pixel_rows) (&cinfo, dest_mgr, num_scanlines);
+   }
+ 
++  TIMER_STOP;
++  TIMER_PRINT ("Decoding took %d ms\n", TIMER_GETDIFF_MS());
++
+ #ifdef PROGRESS_REPORT
+   /* Hack: count final pass as done in case finish_output does an extra pass.
+    * The library won't have updated completed_passes.
+--- /dev/null
++++ libjpeg-turbo-1.1.1/simd/jsimdcfg.inc
+@@ -0,0 +1,69 @@
++;
++; Automatically generated include file from jsimdcfg.inc.h
++;
++;
++; -- jpeglib.h
++;
++%define DCTSIZE 8
++%define DCTSIZE2 64
++;
++; -- jmorecfg.h
++;
++%define RGB_RED 0
++%define RGB_GREEN 1
++%define RGB_BLUE 2
++%define RGB_PIXELSIZE 3
++; Representation of a single sample (pixel element value).
++; On this SIMD implementation, this must be 'unsigned char'.
++;
++%define JSAMPLE byte ; unsigned char
++%define SIZEOF_JSAMPLE SIZEOF_BYTE ; sizeof(JSAMPLE)
++%define CENTERJSAMPLE 128
++; Representation of a DCT frequency coefficient.
++; On this SIMD implementation, this must be 'short'.
++;
++%define JCOEF word ; short
++%define SIZEOF_JCOEF SIZEOF_WORD ; sizeof(JCOEF)
++; Datatype used for image dimensions.
++; On this SIMD implementation, this must be 'unsigned int'.
++;
++%define JDIMENSION dword ; unsigned int
++%define SIZEOF_JDIMENSION SIZEOF_DWORD ; sizeof(JDIMENSION)
++%define JSAMPROW POINTER ; JSAMPLE * (jpeglib.h)
++%define JSAMPARRAY POINTER ; JSAMPROW * (jpeglib.h)
++%define JSAMPIMAGE POINTER ; JSAMPARRAY * (jpeglib.h)
++%define JCOEFPTR POINTER ; JCOEF * (jpeglib.h)
++%define SIZEOF_JSAMPROW SIZEOF_POINTER ; sizeof(JSAMPROW)
++%define SIZEOF_JSAMPARRAY SIZEOF_POINTER ; sizeof(JSAMPARRAY)
++%define SIZEOF_JSAMPIMAGE SIZEOF_POINTER ; sizeof(JSAMPIMAGE)
++%define SIZEOF_JCOEFPTR SIZEOF_POINTER ; sizeof(JCOEFPTR)
++;
++; -- jdct.h
++;
++; A forward DCT routine is given a pointer to a work area of type DCTELEM[];
++; the DCT is to be performed in-place in that buffer.
++; To maximize parallelism, Type DCTELEM is changed to short (originally, int).
++;
++%define DCTELEM word ; short
++%define SIZEOF_DCTELEM SIZEOF_WORD ; sizeof(DCTELEM)
++%define float FP32 ; float
++%define SIZEOF_FAST_FLOAT SIZEOF_FP32 ; sizeof(float)
++; To maximize parallelism, Type short is changed to short.
++;
++%define ISLOW_MULT_TYPE word ; must be short
++%define SIZEOF_ISLOW_MULT_TYPE SIZEOF_WORD ; sizeof(ISLOW_MULT_TYPE)
++%define IFAST_MULT_TYPE word ; must be short
++%define SIZEOF_IFAST_MULT_TYPE SIZEOF_WORD ; sizeof(IFAST_MULT_TYPE)
++%define IFAST_SCALE_BITS 2 ; fractional bits in scale factors
++%define FLOAT_MULT_TYPE FP32 ; must be float
++%define SIZEOF_FLOAT_MULT_TYPE SIZEOF_FP32 ; sizeof(FLOAT_MULT_TYPE)
++;
++; -- jsimd.h
++;
++%define JSIMD_NONE 0x00
++%define JSIMD_MMX 0x01
++%define JSIMD_3DNOW 0x02
++%define JSIMD_SSE 0x04
++%define JSIMD_SSE2 0x08
++; Short forms of external names for systems with brain-damaged linkers.
++;
+--- /dev/null
++++ libjpeg-turbo-1.1.1/simd/jdcolor-armv7.s
+@@ -0,0 +1,1741 @@
++/*------------------------------------------------------------------------
++* jdcolor-armv7.s
++*
++*  Copyright (c) 2010, Code Aurora Forum. All rights reserved.
++*
++*  Redistribution and use in source and binary forms, with or without
++*  modification, are permitted provided that the following conditions are
++*  met:
++*      * Redistributions of source code must retain the above copyright
++*        notice, this list of conditions and the following disclaimer.
++*      * Redistributions in binary form must reproduce the above
++*        copyright notice, this list of conditions and the following
++*        disclaimer in the documentation and/or other materials provided
++*        with the distribution.
++*      * Neither the name of Code Aurora Forum, Inc. nor the names of its
++*        contributors may be used to endorse or promote products derived
++*        from this software without specific prior written permission.
++*
++*  THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
++*  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
++*  ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
++*  BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++*  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++*  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
++*  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++*  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
++*  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
++*  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++*--------------------------------------------------------------------------
++
++*--------------------------------------------------------------------------
++*                         FUNCTION LIST
++*--------------------------------------------------------------------------
++*
++* - yvup2rgb565_venum
++* - yyvup2rgb565_venum
++* - yvup2bgr888_venum
++* - yyvup2bgr888_venum
++* - yvup2abgr8888_venum
++* - yyvup2abgr8888_venum
++*
++*--------------------------------------------------------------------------
++*/
++
++    .section yvu_plain_to_rgb565, "x"  @ AREA
++    .text                              @ |.text|, CODE, READONLY
++    .align 2
++    .code  32                          @ CODE32
++
++/*-----------------------------------------------------------------------------
++ *   ARM Registers
++ * ---------------------------------------------------------------------------- */
++p_y       .req r0
++p_cr      .req r1
++p_cb      .req r2
++p_rgb     .req r3
++p_bgr     .req r3
++length    .req r12
++
++    .global yvup2rgb565_venum
++    .global yyvup2rgb565_venum
++    .global yvup2bgr888_venum
++    .global yyvup2bgr888_venum
++    .global yvup2abgr8888_venum
++    .global yyvup2abgr8888_venum
++
++@ coefficients in color conversion matrix multiplication
++.equ COEFF_Y,          256             @ contribution of Y
++.equ COEFF_V_RED,      359             @ contribution of V for red
++.equ COEFF_U_GREEN,    -88             @ contribution of U for green
++.equ COEFF_V_GREEN,   -183             @ contribution of V for green
++.equ COEFF_U_BLUE,     454             @ contribution of U for blue
++
++@ Clamping constants 0x0 and 0xFF
++.equ COEFF_0,          0
++.equ COEFF_255,        255
++
++@ Bias coefficients for red, green and blue
++.equ COEFF_BIAS_R,   -45824            @ Red   bias =     -359*128 + 128
++.equ COEFF_BIAS_G,    34816            @ Green bias = (88+183)*128 + 128
++.equ COEFF_BIAS_B,   -57984            @ Blue  bias =     -454*128 + 128
++
++
++/*--------------------------------------------------------------------------
++* FUNCTION     : yvup2rgb565_venum
++*--------------------------------------------------------------------------
++* DESCRIPTION  : Perform YVU planar to RGB565 conversion.
++*--------------------------------------------------------------------------
++* C PROTOTYPE  : void yvup2rgb565_venum(uint8_t  *p_y,
++*                                 uint8_t  *p_cr,
++*                                 uint8_t  *p_cb,
++*                                 uint8_t  *p_rgb565,
++*                                 uint32_t  length)
++*--------------------------------------------------------------------------
++* REG INPUT    : R0: uint8_t  *p_y
++*                      pointer to the input Y Line
++*                R1: uint8_t  *p_cr
++*                      pointer to the input Cr Line
++*                R2: uint8_t  *p_cb
++*                      pointer to the input Cb Line
++*                R3: uint8_t  *p_rgb565
++*                      pointer to the output RGB Line
++*                R12: uint32_t  length
++*                      width of Line
++*--------------------------------------------------------------------------
++* STACK ARG    : None
++*--------------------------------------------------------------------------
++* REG OUTPUT   : None
++*--------------------------------------------------------------------------
++* MEM INPUT    : p_y      - a line of Y pixels
++*                p_cr     - a line of Cr pixels
++*                p_cb     - a line of Cb pixels
++*                length   - the width of the input line
++*--------------------------------------------------------------------------
++* MEM OUTPUT   : p_rgb565 - the converted rgb pixels
++*--------------------------------------------------------------------------
++* REG AFFECTED : ARM:  R0-R4, R12
++*                NEON: Q0-Q15
++*--------------------------------------------------------------------------
++* STACK USAGE  : none
++*--------------------------------------------------------------------------
++* CYCLES       : none
++*
++*--------------------------------------------------------------------------
++* NOTES        :
++*--------------------------------------------------------------------------
++*/
++.type yvup2rgb565_venum, %function
++yvup2rgb565_venum:
++    /*-------------------------------------------------------------------------
++     *  Store stack registers
++     * ------------------------------------------------------------------------ */
++    STMFD SP!, {LR}
++
++    PLD [R0, R3]                       @ preload luma line
++
++    ADR   R12, constants
++
++    VLD1.S16  {D6, D7}, [R12]!         @ D6, D7: 359 |  -88 | -183 | 454 | 256 | 0 | 255 | 0
++    VLD1.S32  {D30, D31}, [R12]        @ Q15   :  -45824    |    34816   |  -57984 |     X
++
++    /*-------------------------------------------------------------------------
++     *  Load the 5th parameter via stack
++     *  R0 ~ R3 are used to pass the first 4 parameters, the 5th and above
++     *  parameters are passed via stack
++     * ------------------------------------------------------------------------ */
++    LDR R12, [SP, #4]                  @ LR is the only one that has been pushed
++                                       @ into stack, increment SP by 4 to
++                                       @ get the parameter.
++                                       @ LDMIB SP, {R12} is an equivalent
++                                       @ instruction in this case, where only
++                                       @ one register was pushed into stack.
++
++    /*-------------------------------------------------------------------------
++     *  Load clamping parameters to duplicate vector elements
++     * ------------------------------------------------------------------------ */
++    VDUP.S16  Q4,  D7[1]               @ Q4:  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0
++    VDUP.S16  Q5,  D7[2]               @ Q5: 255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    /*-------------------------------------------------------------------------
++     *  Read bias
++     * ------------------------------------------------------------------------ */
++    VDUP.S32  Q0,   D30[0]             @ Q0:  -45824 | -45824 | -45824 | -45824
++    VDUP.S32  Q1,   D30[1]             @ Q1:   34816 |  34816 |  34816 |  34816
++    VDUP.S32  Q2,   D31[0]             @ Q2:  -70688 | -70688 | -70688 | -70688
++
++
++    /*-------------------------------------------------------------------------
++     *  The main loop
++     * ------------------------------------------------------------------------ */
++loop_yvup2rgb565:
++
++    /*-------------------------------------------------------------------------
++     *  Load input from Y, V and U
++     *  D12  : Y0  Y1  Y2  Y3  Y4  Y5  Y6  Y7
++     *  D14  : V0  V1  V2  V3  V4  V5  V6  V7
++     *  D15  : U0  U1  U2  U3  U4  U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VLD1.U8  {D12},  [p_y]!            @ Load 8 Y  elements (uint8) to D12
++    VLD1.U8  {D14},  [p_cr]!           @ Load 8 Cr elements (uint8) to D14
++    VLD1.U8  {D15},  [p_cb]!           @ Load 8 Cb elements (uint8) to D15
++
++    /*-------------------------------------------------------------------------
++     *  Expand uint8 value to uint16
++     *  D18, D19: Y0 Y1 Y2 Y3 Y4 Y5 Y6 Y7
++     *  D20, D21: V0 V1 V2 V3 V4 V5 V6 V7
++     *  D22, D23: U0 U1 U2 U3 U4 U5 U6 U7
++     * ------------------------------------------------------------------------ */
++    VMOVL.U8 Q9,  D12
++    VMOVL.U8 Q10, D14
++    VMOVL.U8 Q11, D15
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q12, D20, D6[0]         @ Q12:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q13, D22, D6[1]         @ Q13:  -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q13, D20, D6[2]         @ Q13:  -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q14, D22, D6[3]         @ Q14:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q12, Q0                  @ Q12 add Red   bias -45824
++    VADD.S32  Q13, Q1                  @ Q13 add Green bias  34816
++    VADD.S32  Q14, Q2                  @ Q14 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMLAL.S16  Q12, D18, D7[0]         @ Q12: R0, R1, R2, R3 in 32-bit Q8 format
++    VMLAL.S16  Q13, D18, D7[0]         @ Q13: G0, G1, G2, G3 in 32-bit Q8 format
++    VMLAL.S16  Q14, D18, D7[0]         @ Q14: B0, B1, B2, B3 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D18 , Q12, #8          @ D18: R0, R1, R2, R3 in 16-bit Q0 format
++    VSHRN.S32   D20 , Q13, #8          @ D20: G0, G1, G2, G3 in 16-bit Q0 format
++    VSHRN.S32   D22,  Q14, #8          @ D22: B0, B1, B2, B3 in 16-bit Q0 format
++
++    /*-------------------------------------------------------------------------
++     *  Done with the first 4 elements, continue on the next 4 elements
++     * ------------------------------------------------------------------------ */
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q12, D21, D6[0]         @ Q12:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q13, D23, D6[1]         @ Q13:  -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q13, D21, D6[2]         @ Q13:  -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q14, D23, D6[3]         @ Q14:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q12, Q0                  @ Q12 add Red   bias -45824
++    VADD.S32  Q13, Q1                  @ Q13 add Green bias  34816
++    VADD.S32  Q14, Q2                  @ Q14 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMLAL.S16  Q12, D19, D7[0]         @ Q12: R0, R1, R2, R3 in 32-bit Q8 format
++    VMLAL.S16  Q13, D19, D7[0]         @ Q13: G0, G1, G2, G3 in 32-bit Q8 format
++    VMLAL.S16  Q14, D19, D7[0]         @ Q14: B0, B1, B2, B3 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D19 , Q12, #8          @ D18: R0, R1, R2, R3 in 16-bit Q0 format
++    VSHRN.S32   D21 , Q13, #8          @ D20: G0, G1, G2, G3 in 16-bit Q0 format
++    VSHRN.S32   D23,  Q14, #8          @ D22: B0, B1, B2, B3 in 16-bit Q0 format
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q9, Q9, Q4               @ if Q9 <   0, Q9 =   0
++    VMIN.S16  Q9, Q9, Q5               @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16  D28, Q9               @ store Red to D28, narrow the value from int16 to int8
++
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D27, Q10             @ store Green to D27, narrow the value from int16 to int8
++
++    VMAX.S16  Q11, Q11, Q4             @ if Q11 <   0, Q11 =   0
++    VMIN.S16  Q11, Q11, Q5             @ if Q11 > 255, Q11 = 255
++    VQMOVUN.S16   D26, Q11             @ store Blue to D26, narrow the value from int16 to int8.
++
++    /*-------------------------------------------------------------------------
++     *  D27:  3 bits of Green + 5 bits of Blue
++     *  D28:  5 bits of Red   + 3 bits of Green
++     * ------------------------------------------------------------------------ */
++    VSRI.8   D28, D27, #5              @ right shift G by 5 and insert to R
++    VSHL.U8  D27, D27, #3              @ left  shift G by 3
++    VSRI.8   D27, D26, #3              @ right shift B by 3 and insert to G
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yvup2rgb565          @ jump to trailing processing if remaining length is less than 8
++
++    VST2.U8  {D27, D28}, [p_rgb]!      @ vector store Red, Green, Blue to destination
++                                       @ Blue at LSB
++
++    BHI loop_yvup2rgb565               @ loop if more than 8 pixels left
++
++    BEQ  end_yvup2rgb565               @ done if exactly 8 pixel processed in the loop
++
++
++trailing_yvup2rgb565:
++    /*-------------------------------------------------------------------------
++     *  There are from 1 ~ 7 pixels left in the trailing part.
++     *  First adding 7 to the length so the length would be from 0 ~ 6.
++     *  eg: 1 pixel left in the trailing part, so 1-8+7 = 0.
++     *  Then save 1 pixel unconditionally since at least 1 pixels left in the
++     *  trailing part.
++     * ------------------------------------------------------------------------ */
++    ADDS length, length, #7            @ there are 7 or less in the trailing part
++
++    VST2.U8 {D27[0], D28[0]}, [p_rgb]! @ at least 1 pixel left in the trailing part
++    BEQ  end_yvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D27[1], D28[1]}, [p_rgb]! @ store one more pixel
++    BEQ  end_yvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D27[2], D28[2]}, [p_rgb]! @ store one more pixel
++    BEQ  end_yvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D27[3], D28[3]}, [p_rgb]! @ store one more pixel
++    BEQ  end_yvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D27[4], D28[4]}, [p_rgb]! @ store one more pixel
++    BEQ  end_yvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D27[5], D28[5]}, [p_rgb]! @ store one more pixel
++    BEQ  end_yvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D27[6], D28[6]}, [p_rgb]! @ store one more pixel
++
++end_yvup2rgb565:
++    LDMFD SP!, {PC}
++
++                                       @ end of yvup2rgb565
++
++
++/*--------------------------------------------------------------------------
++* FUNCTION     : yyvup2rgb565_venum
++*--------------------------------------------------------------------------
++* DESCRIPTION  : Perform YYVU planar to RGB565 conversion.
++*--------------------------------------------------------------------------
++* C PROTOTYPE  : void yyvup2rgb565_venum(uint8_t  *p_y,
++*                                 uint8_t  *p_cr,
++*                                 uint8_t  *p_cb,
++*                                 uint8_t  *p_rgb565,
++*                                 uint32_t  length)
++*--------------------------------------------------------------------------
++* REG INPUT    : R0: uint8_t  *p_y
++*                      pointer to the input Y Line
++*                R1: uint8_t  *p_cr
++*                      pointer to the input Cr Line
++*                R2: uint8_t  *p_cb
++*                      pointer to the input Cb Line
++*                R3: uint8_t  *p_rgb565
++*                      pointer to the output RGB Line
++*                R12: uint32_t  length
++*                      width of Line
++*--------------------------------------------------------------------------
++* STACK ARG    : None
++*--------------------------------------------------------------------------
++* REG OUTPUT   : None
++*--------------------------------------------------------------------------
++* MEM INPUT    : p_y      - a line of Y pixels
++*                p_cr     - a line of Cr pixels
++*                p_cb     - a line of Cb pixels
++*                length   - the width of the input line
++*--------------------------------------------------------------------------
++* MEM OUTPUT   : p_rgb565 - the converted rgb pixels
++*--------------------------------------------------------------------------
++* REG AFFECTED : ARM:  R0-R4, R12
++*                NEON: Q0-Q15
++*--------------------------------------------------------------------------
++* STACK USAGE  : none
++*--------------------------------------------------------------------------
++* CYCLES       : none
++*
++*--------------------------------------------------------------------------
++* NOTES        :
++*--------------------------------------------------------------------------
++*/
++.type yyvup2rgb565_venum, %function
++yyvup2rgb565_venum:
++    /*-------------------------------------------------------------------------
++     *  Store stack registers
++     * ------------------------------------------------------------------------ */
++    STMFD SP!, {LR}
++
++    PLD [R0, R3]                       @ preload luma line
++
++    ADR   R12, constants
++
++    VLD1.S16  {D6, D7}, [R12]!         @ D6, D7: 359 |  -88 | -183 | 454 | 256 | 0 | 255 | 0
++    VLD1.S32  {D30, D31}, [R12]        @ Q15   :  -45824    |    34816   |  -57984 |     X
++
++    /*-------------------------------------------------------------------------
++     *  Load the 5th parameter via stack
++     *  R0 ~ R3 are used to pass the first 4 parameters, the 5th and above
++     *  parameters are passed via stack
++     * ------------------------------------------------------------------------ */
++    LDR R12, [SP, #4]                  @ LR is the only one that has been pushed
++                                       @ into stack, increment SP by 4 to
++                                       @ get the parameter.
++                                       @ LDMIB SP, {R12} is an equivalent
++                                       @ instruction in this case, where only
++                                       @ one register was pushed into stack.
++
++    /*-------------------------------------------------------------------------
++     *  Load clamping parameters to duplicate vector elements
++     * ------------------------------------------------------------------------ */
++    VDUP.S16  Q4,  D7[1]               @ Q4:  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0
++    VDUP.S16  Q5,  D7[2]               @ Q5: 255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    /*-------------------------------------------------------------------------
++     *  Read bias
++     * ------------------------------------------------------------------------ */
++    VDUP.S32  Q0,   D30[0]             @ Q0:  -45824 | -45824 | -45824 | -45824
++    VDUP.S32  Q1,   D30[1]             @ Q1:   34816 |  34816 |  34816 |  34816
++    VDUP.S32  Q2,   D31[0]             @ Q2:  -70688 | -70688 | -70688 | -70688
++
++
++    /*-------------------------------------------------------------------------
++     *  The main loop
++     * ------------------------------------------------------------------------ */
++loop_yyvup2rgb565:
++
++    /*-------------------------------------------------------------------------
++     *  Load input from Y, V and U
++     *  D12, D13: Y0 Y2 Y4 Y6 Y8 Y10 Y12 Y14, Y1 Y3 Y5 Y7 Y9 Y11 Y13 Y15
++     *  D14     : V0 V1 V2 V3 V4 V5  V6  V7
++     *  D15     : U0 U1 U2 U3 U4 U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VLD2.U8  {D12,D13}, [p_y]!         @ Load 16 Luma elements (uint8) to D12, D13
++    VLD1.U8  {D14},     [p_cr]!        @ Load 8 Cr elements (uint8) to D14
++    VLD1.U8  {D15},     [p_cb]!        @ Load 8 Cb elements (uint8) to D15
++
++    /*-------------------------------------------------------------------------
++     *  Expand uint8 value to uint16
++     *  D24, D25: Y0 Y2 Y4 Y6 Y8 Y10 Y12 Y14
++     *  D26, D27: Y1 Y3 Y5 Y7 Y9 Y11 Y13 Y15
++     *  D28, D29: V0 V1 V2 V3 V4 V5  V6  V7
++     *  D30, D31: U0 U1 U2 U3 U4 U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VMOVL.U8 Q12, D12
++    VMOVL.U8 Q13, D13
++    VMOVL.U8 Q14, D14
++    VMOVL.U8 Q15, D15
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q6, D28, D6[0]          @ Q6:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q7, D30, D6[1]          @ Q7:  -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q7, D28, D6[2]          @ q7:  -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q8, D30, D6[3]          @ q8:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q6, Q0                   @ Q6 add Red   bias -45824
++    VADD.S32  Q7, Q1                   @ Q7 add Green bias  34816
++    VADD.S32  Q8, Q2                   @ Q8 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMOV.S32   Q9, Q6
++    VMLAL.S16  Q6, D24, D7[0]          @ Q6: R0, R2, R4, R6 in 32-bit Q8 format
++    VMLAL.S16  Q9, D26, D7[0]          @ Q9: R1, R3, R5, R7 in 32-bit Q8 format
++
++    VMOV.S32   Q10, Q7
++    VMLAL.S16  Q7,  D24, D7[0]         @ Q7:  G0, G2, G4, G6 in 32-bit Q8 format
++    VMLAL.S16  Q10, D26, D7[0]         @ Q10: G1, G3, G5, G7 in 32-bit Q8 format
++
++    VMOV.S32   Q11, Q8
++    VMLAL.S16  Q8,  D24, D7[0]         @ Q8:  B0, B2, B4, B6 in 32-bit Q8 format
++    VMLAL.S16  Q11, D26, D7[0]         @ Q11: B1, B3, B5, B7 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D12, Q6,  #8           @ D12: R0 R2 R4 R6 in 16-bit Q0 format
++    VSHRN.S32   D13, Q9,  #8           @ D13: R1 R3 R5 R7 in 16-bit Q0 format
++    VZIP.16     D12, D13               @ Q6 : R0 R1 R2 R3 R4 R5 R6 R7
++
++    VSHRN.S32   D18, Q7,  #8           @ D18: G0 G2 G4 G6 in 16-bit Q0 format
++    VSHRN.S32   D19, Q10, #8           @ D19: G1 G3 G5 G7 in 16-bit Q0 format
++    VZIP.16     D18, D19               @ Q9 : G0 G1 G2 G3 G4 G5 G6 G7
++
++    VSHRN.S32   D20, Q8,  #8           @ D20: B0 B2 B4 B6 in 16-bit Q0 format
++    VSHRN.S32   D21, Q11, #8           @ D21: B1 B3 B5 B7 in 16-bit Q0 format
++    VZIP.16     D20, D21               @ Q10: B0 B1 B2 B3 B4 B5 B6 B7
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q6, Q6, Q4               @ if Q6 <   0, Q6 =   0
++    VMIN.S16  Q6, Q6, Q5               @ if Q6 > 255, Q6 = 255
++    VQMOVUN.S16  D23, Q6               @ store Red to D23, narrow the value from int16 to int8
++
++    VMAX.S16  Q9, Q9, Q4               @ if Q9 <   0, Q9 =   0
++    VMIN.S16  Q9, Q9, Q5               @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16  D22, Q9               @ store Green to D22, narrow the value from int16 to int8
++
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D21, Q10             @ store Blue to D21, narrow the value from int16 to int8
++
++    /*-------------------------------------------------------------------------
++     *  D22:  3 bits of Green + 5 bits of Blue
++     *  D23:  5 bits of Red   + 3 bits of Green
++     * ------------------------------------------------------------------------ */
++    VSRI.8   D23, D22, #5              @ right shift G by 5 and insert to R
++    VSHL.U8  D22, D22, #3              @ left shift G by 3
++    VSRI.8   D22, D21, #3              @ right shift B by 3 and insert to G
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yyvup2rgb565         @ jump to trailing processing if remaining length is less than 8
++
++    VST2.U8  {D22,D23}, [p_rgb]!       @ vector store Red, Green, Blue to destination
++                                       @ Blue at LSB
++
++    BEQ  end_yyvup2rgb565              @ done if exactly 8 pixel processed in the loop
++
++
++    /*-------------------------------------------------------------------------
++     *  Done with the first 8 elements, continue on the next 8 elements
++     * ------------------------------------------------------------------------ */
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q6, D29, D6[0]          @ Q6: 359*(V4,V5,V6,V7)       Red
++    VMULL.S16  Q7, D31, D6[1]          @ Q7: -88*(U4,U5,U6,U7)      Green
++    VMLAL.S16  Q7, D29, D6[2]          @ Q7: -88*(U4,U5,U6,U7) - 183*(V4,V5,V6,V7)
++    VMULL.S16  Q8, D31, D6[3]          @ Q8: 454*(U4,U5,U6,U7)       Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q6, Q0                   @ Q6 add Red   bias -45824
++    VADD.S32  Q7, Q1                   @ Q7 add Green bias  34816
++    VADD.S32  Q8, Q2                   @ Q8 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMOV.S32   Q9, Q6
++    VMLAL.S16  Q6, D25, D7[0]          @ Q6: R8 R10 R12 R14 in 32-bit Q8 format
++    VMLAL.S16  Q9, D27, D7[0]          @ Q9: R9 R11 R13 R15 in 32-bit Q8 format
++
++    VMOV.S32   Q10, Q7
++    VMLAL.S16  Q7,  D25, D7[0]         @ Q7: G0, G2, G4, G6 in 32-bit Q8 format
++    VMLAL.S16  Q10, D27, D7[0]         @ Q10 : G1, G3, G5, G7 in 32-bit Q8 format
++
++    VMOV.S32   Q11, Q8
++    VMLAL.S16  Q8,  D25, D7[0]         @ Q8: B0, B2, B4, B6 in 32-bit Q8 format
++    VMLAL.S16  Q11, D27, D7[0]         @ Q11 : B1, B3, B5, B7 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D12, Q6,  #8           @ D12: R8 R10 R12 R14 in 16-bit Q0 format
++    VSHRN.S32   D13, Q9,  #8           @ D13: R9 R11 R13 R15 in 16-bit Q0 format
++    VZIP.16     D12, D13               @ Q6: R8 R9 R10 R11 R12 R13 R14 R15
++
++    VSHRN.S32   D18, Q7,  #8           @ D18: G8 G10 G12 G14 in 16-bit Q0 format
++    VSHRN.S32   D19, Q10, #8           @ D19: G9 G11 G13 G15 in 16-bit Q0 format
++    VZIP.16     D18, D19               @ Q9:  G8 G9 G10 G11 G12 G13 G14 G15
++
++    VSHRN.S32   D20, Q8,  #8           @ D20: B8 B10 B12 B14 in 16-bit Q0 format
++    VSHRN.S32   D21, Q11, #8           @ D21: B9 B11 B13 B15 in 16-bit Q0 format
++    VZIP.16     D20, D21               @ Q10: B8 B9 B10 B11 B12 B13 B14 B15
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q6, Q6, Q4               @ if Q6 <   0, Q6 =   0
++    VMIN.S16  Q6, Q6, Q5               @ if Q6 > 255, Q6 = 255
++    VQMOVUN.S16  D23, Q6               @ store Red to D23, narrow the value from int16 to int8
++
++    VMAX.S16  Q9, Q9, Q4               @ if Q9 <   0, Q9 =   0
++    VMIN.S16  Q9, Q9, Q5               @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16  D22, Q9               @ store Green to D22, narrow the value from int16 to int8
++
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D21, Q10             @ store Blue to D21, narrow the value from int16 to int8
++
++    /*-------------------------------------------------------------------------
++     *  D22:  3 bits of Green + 5 bits of Blue
++     *  D23:  5 bits of Red   + 3 bits of Green
++     * ------------------------------------------------------------------------ */
++    VSRI.8   D23, D22, #5              @ right shift G by 5 and insert to R
++    VSHL.U8  D22, D22, #3              @ left shift G by 3
++    VSRI.8   D22, D21, #3              @ right shift B by 3 and insert to G
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yyvup2rgb565         @ jump to trailing processing if remaining length is less than 8
++
++    VST2.U8  {D22,D23}, [p_rgb]!       @ vector store Red, Green, Blue to destination
++                                       @ Blue at LSB
++
++    BHI loop_yyvup2rgb565              @ loop if more than 8 pixels left
++
++    BEQ  end_yyvup2rgb565              @ done if exactly 8 pixel processed in the loop
++
++
++trailing_yyvup2rgb565:
++    /*-------------------------------------------------------------------------
++     *  There are from 1 ~ 7 pixels left in the trailing part.
++     *  First adding 7 to the length so the length would be from 0 ~ 6.
++     *  eg: 1 pixel left in the trailing part, so 1-8+7 = 0.
++     *  Then save 1 pixel unconditionally since at least 1 pixels left in the
++     *  trailing part.
++     * ------------------------------------------------------------------------ */
++    ADDS length, length, #7            @ there are 7 or less in the trailing part
++
++    VST2.U8 {D22[0],D23[0]}, [p_rgb]!  @ at least 1 pixel left in the trailing part
++    BEQ end_yyvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D22[1],D23[1]}, [p_rgb]!  @ store one more pixel
++    BEQ end_yyvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D22[2],D23[2]}, [p_rgb]!  @ store one more pixel
++    BEQ end_yyvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D22[3],D23[3]}, [p_rgb]!  @ store one more pixel
++    BEQ end_yyvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D22[4],D23[4]}, [p_rgb]!  @ store one more pixel
++    BEQ end_yyvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D22[5],D23[5]}, [p_rgb]!  @ store one more pixel
++    BEQ end_yyvup2rgb565               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST2.U8 {D22[6],D23[6]}, [p_rgb]!  @ store one more pixel
++
++end_yyvup2rgb565:
++    LDMFD SP!, {PC}
++
++                                       @ end of yyvup2rgb565
++
++constants:
++    .hword (COEFF_V_RED),  (COEFF_U_GREEN), (COEFF_V_GREEN), (COEFF_U_BLUE) @   359  | -88   |  -183  | 454
++    .hword (COEFF_Y),      (COEFF_0),       (COEFF_255)    , (COEFF_0)      @   256  |   0   |   255  |  0
++    .word  (COEFF_BIAS_R), (COEFF_BIAS_G),  (COEFF_BIAS_B)                  @ -45824 | 34816 | -57984 |  X
++
++/*--------------------------------------------------------------------------
++* FUNCTION     : yvup2bgr888_venum
++*--------------------------------------------------------------------------
++* DESCRIPTION  : Perform YVU planar to BGR888 conversion.
++*--------------------------------------------------------------------------
++* C PROTOTYPE  : void yvup2bgr888_venum(uint8_t  *p_y,
++*                                 uint8_t  *p_cr,
++*                                 uint8_t  *p_cb,
++*                                 uint8_t  *p_bgr888,
++*                                 uint32_t  length)
++*--------------------------------------------------------------------------
++* REG INPUT    : R0: uint8_t  *p_y
++*                      pointer to the input Y Line
++*                R1: uint8_t  *p_cr
++*                      pointer to the input Cr Line
++*                R2: uint8_t  *p_cb
++*                      pointer to the input Cb Line
++*                R3: uint8_t  *p_bgr888
++*                      pointer to the output BGR Line
++*                R12: uint32_t  length
++*                      width of Line
++*--------------------------------------------------------------------------
++* STACK ARG    : None
++*--------------------------------------------------------------------------
++* REG OUTPUT   : None
++*--------------------------------------------------------------------------
++* MEM INPUT    : p_y      - a line of Y pixels
++*                p_cr     - a line of Cr pixels
++*                p_cb     - a line of Cb pixels
++*                length   - the width of the input line
++*--------------------------------------------------------------------------
++* MEM OUTPUT   : p_bgr888 - the converted bgr pixels
++*--------------------------------------------------------------------------
++* REG AFFECTED : ARM:  R0-R4, R12
++*                NEON: Q0-Q15
++*--------------------------------------------------------------------------
++* STACK USAGE  : none
++*--------------------------------------------------------------------------
++* CYCLES       : none
++*
++*--------------------------------------------------------------------------
++* NOTES        :
++*--------------------------------------------------------------------------
++*/
++.type yvup2bgr888_venum, %function
++yvup2bgr888_venum:
++
++    /*-------------------------------------------------------------------------
++     *  Store stack registers
++     * ------------------------------------------------------------------------ */
++    STMFD SP!, {LR}
++
++    PLD [R0, R3]                      @ preload luma line
++
++    ADR   R12, constants
++
++    VLD1.S16  {D6, D7}, [R12]!        @ D6, D7: 359 | -88 | -183 | 454 | 256 | 0 | 255 | 0
++    VLD1.S32  {D30, D31}, [R12]       @ Q15   :  -45824   |    34816   |  -57984 |     X
++
++    /*-------------------------------------------------------------------------
++     *  Load the 5th parameter via stack
++     *  R0 ~ R3 are used to pass the first 4 parameters, the 5th and above
++     *  parameters are passed via stack
++     * ------------------------------------------------------------------------ */
++    LDR R12, [SP, #4]                 @ LR is the only one that has been pushed
++                                      @ into stack, increment SP by 4 to
++                                      @ get the parameter.
++                                      @ LDMIB SP, {R12} is an equivalent
++                                      @ instruction in this case, where only
++                                      @ one register was pushed into stack.
++
++    /*-------------------------------------------------------------------------
++     *  Load clamping parameters to duplicate vector elements
++     * ------------------------------------------------------------------------ */
++    VDUP.S16  Q4,  D7[1]              @ Q4:  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0
++    VDUP.S16  Q5,  D7[2]              @ Q5: 255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    /*-------------------------------------------------------------------------
++     *  Read bias
++     * ------------------------------------------------------------------------ */
++    VDUP.S32  Q0,   D30[0]            @ Q0:  -45824 | -45824 | -45824 | -45824
++    VDUP.S32  Q1,   D30[1]            @ Q1:   34816 |  34816 |  34816 |  34816
++    VDUP.S32  Q2,   D31[0]            @ Q2:  -57984 | -57984 | -57984 | -57984
++
++
++    /*-------------------------------------------------------------------------
++     *  The main loop
++     * ------------------------------------------------------------------------ */
++loop_yvup2bgr888:
++
++    /*-------------------------------------------------------------------------
++     *  Load input from Y, V and U
++     *  D12  : Y0  Y1  Y2  Y3  Y4  Y5  Y6  Y7
++     *  D14  : V0  V1  V2  V3  V4  V5  V6  V7
++     *  D15  : U0  U1  U2  U3  U4  U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VLD1.U8  {D12},  [p_y]!           @ Load 8 Luma elements (uint8) to D12
++    VLD1.U8  {D14},  [p_cr]!          @ Load 8 Cr elements (uint8) to D14
++    VLD1.U8  {D15},  [p_cb]!          @ Load 8 Cb elements (uint8) to D15
++
++    /*-------------------------------------------------------------------------
++     *  Expand uint8 value to uint16
++     *  D18, D19: Y0 Y1 Y2 Y3 Y4 Y5 Y6 Y7
++     *  D20, D21: V0 V1 V2 V3 V4 V5 V6 V7
++     *  D22, D23: U0 U1 U2 U3 U4 U5 U6 U7
++     * ------------------------------------------------------------------------ */
++    VMOVL.U8 Q9,  D12
++    VMOVL.U8 Q10, D14
++    VMOVL.U8 Q11, D15
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q12, D20, D6[0]        @ Q12:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q13, D22, D6[1]        @ Q13:  -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q13, D20, D6[2]        @ Q13:  -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q14, D22, D6[3]        @ Q14:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q12, Q0                 @ Q12 add Red   bias -45824
++    VADD.S32  Q13, Q1                 @ Q13 add Green bias  34816
++    VADD.S32  Q14, Q2                 @ Q14 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMLAL.S16  Q12, D18, D7[0]        @ Q12: R0, R1, R2, R3 in 32-bit Q8 format
++    VMLAL.S16  Q13, D18, D7[0]        @ Q13: G0, G1, G2, G3 in 32-bit Q8 format
++    VMLAL.S16  Q14, D18, D7[0]        @ Q14: B0, B1, B2, B3 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D18 , Q12, #8         @ D18: R0, R1, R2, R3 in 16-bit Q0 format
++    VSHRN.S32   D20 , Q13, #8         @ D20: G0, G1, G2, G3 in 16-bit Q0 format
++    VSHRN.S32   D22,  Q14, #8         @ D22: B0, B1, B2, B3 in 16-bit Q0 format
++
++    /*-------------------------------------------------------------------------
++     *  Done with the first 4 elements, continue on the next 4 elements
++     * ------------------------------------------------------------------------ */
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q12, D21, D6[0]        @ Q12:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q13, D23, D6[1]        @ Q13:  -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q13, D21, D6[2]        @ Q13:  -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q14, D23, D6[3]        @ Q14:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q12, Q0                 @ Q12 add Red   bias -45824
++    VADD.S32  Q13, Q1                 @ Q13 add Green bias  34816
++    VADD.S32  Q14, Q2                 @ Q14 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMLAL.S16  Q12, D19, D7[0]        @ Q12: R0, R1, R2, R3 in 32-bit Q8 format
++    VMLAL.S16  Q13, D19, D7[0]        @ Q13: G0, G1, G2, G3 in 32-bit Q8 format
++    VMLAL.S16  Q14, D19, D7[0]        @ Q14: B0, B1, B2, B3 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D19 , Q12, #8         @ D18: R0, R1, R2, R3 in 16-bit Q0 format
++    VSHRN.S32   D21 , Q13, #8         @ D20: G0, G1, G2, G3 in 16-bit Q0 format
++    VSHRN.S32   D23,  Q14, #8         @ D22: B0, B1, B2, B3 in 16-bit Q0 format
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q11, Q11, Q4            @ if Q11 <   0, Q11 =   0
++    VMIN.S16  Q11, Q11, Q5            @ if Q11 > 255, Q11 = 255
++    VQMOVUN.S16   D28, Q11            @ store Blue to D28, narrow the value from int16 to int8
++
++    VMAX.S16  Q10, Q10, Q4            @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5            @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D27, Q10            @ store Green to D27, narrow the value from int16 to int8
++
++    VMAX.S16    Q9, Q9, Q4            @ if Q9 <   0, Q9 =   0
++    VMIN.S16    Q9, Q9, Q5            @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16    D26, Q9            @ store Red to D26, narrow the value from int16 to int8.
++
++    SUBS length, length, #8           @ check if the length is less than 8
++
++    BMI  trailing_yvup2bgr888         @ jump to trailing processing if remaining length is less than 8
++
++    VST3.U8  {D26,D27,D28}, [p_bgr]!  @ vector store Red, Green, Blue to destination
++                                      @ Blue at LSB
++
++    BHI loop_yvup2bgr888              @ loop if more than 8 pixels left
++
++    BEQ  end_yvup2bgr888              @ done if exactly 8 pixel processed in the loop
++
++
++trailing_yvup2bgr888:
++    /*-------------------------------------------------------------------------
++     *  There are from 1 ~ 7 pixels left in the trailing part.
++     *  First adding 7 to the length so the length would be from 0 ~ 6.
++     *  eg: 1 pixel left in the trailing part, so 1-8+7 = 0.
++     *  Then save 1 pixel unconditionally since at least 1 pixels left in the
++     *  trailing part.
++     * ------------------------------------------------------------------------ */
++    ADDS length, length, #7           @ there are 7 or less in the trailing part
++
++    VST3.U8 {D26[0], D27[0], D28[0]}, [p_bgr]! @ at least 1 pixel left in the trailing part
++    BEQ  end_yvup2bgr888                       @ done if 0 pixel left
++
++    SUBS length, length, #1           @ update length counter
++    VST3.U8 {D26[1], D27[1], D28[1]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2bgr888                        @ done if 0 pixel left
++
++    SUBS length, length, #1           @ update length counter
++    VST3.U8 {D26[2], D27[2], D28[2]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2bgr888                        @ done if 0 pixel left
++
++    SUBS length, length, #1           @ update length counter
++    VST3.U8 {D26[3], D27[3], D28[3]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2bgr888                        @ done if 0 pixel left
++
++    SUBS length, length, #1           @ update length counter
++    VST3.U8 {D26[4], D27[4], D28[4]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2bgr888                        @ done if 0 pixel left
++
++    SUBS length, length, #1           @ update length counter
++    VST3.U8 {D26[5], D27[5], D28[5]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2bgr888                        @ done if 0 pixel left
++
++    SUBS length, length, #1           @ update length counter
++    VST3.U8 {D26[6], D27[6], D28[6]}, [p_bgr]!  @ store one more pixel
++
++end_yvup2bgr888:
++    LDMFD SP!, {PC}
++
++                                      @ end of yvup2bgr888
++
++
++/*-------------------------------------------------------------------------
++* FUNCTION     : yyvup2bgr888_venum
++*--------------------------------------------------------------------------
++* DESCRIPTION  : Perform YYVU planar to BGR888 conversion.
++*--------------------------------------------------------------------------
++* C PROTOTYPE  : void yyvup2bgr888_venum(uint8_t  *p_y,
++*                                 uint8_t  *p_cr,
++*                                 uint8_t  *p_cb,
++*                                 uint8_t  *p_bgr888,
++*                                 uint32_t  length)
++*--------------------------------------------------------------------------
++* REG INPUT    : R0: uint8_t  *p_y
++*                      pointer to the input Y Line
++*                R1: uint8_t  *p_cr
++*                      pointer to the input Cr Line
++*                R2: uint8_t  *p_cb
++*                      pointer to the input Cb Line
++*                R3: uint8_t  *p_bgr888
++*                      pointer to the output BGR Line
++*                R12: uint32_t  length
++*                      width of Line
++*--------------------------------------------------------------------------
++* STACK ARG    : None
++*--------------------------------------------------------------------------
++* REG OUTPUT   : None
++*--------------------------------------------------------------------------
++* MEM INPUT    : p_y      - a line of Y pixels
++*                p_cr     - a line of Cr pixels
++*                p_cb     - a line of Cb pixels
++*                length   - the width of the input line
++*--------------------------------------------------------------------------
++* MEM OUTPUT   : p_bgr888 - the converted bgr pixels
++*--------------------------------------------------------------------------
++* REG AFFECTED : ARM:  R0-R4, R12
++*                NEON: Q0-Q15
++*--------------------------------------------------------------------------
++* STACK USAGE  : none
++*--------------------------------------------------------------------------
++* CYCLES       : none
++*
++*--------------------------------------------------------------------------
++* NOTES        :
++*--------------------------------------------------------------------------
++*/
++.type yyvup2bgr888_venum, %function
++yyvup2bgr888_venum:
++    /*-------------------------------------------------------------------------
++     *  Store stack registers
++     * ------------------------------------------------------------------------ */
++    STMFD SP!, {LR}
++
++    PLD [R0, R3]                       @ preload luma line
++
++    ADR   R12, constants
++
++    VLD1.S16  {D6, D7}, [R12]!         @ D6, D7: 359 | -88 | -183 | 454 | 256 | 0 | 255 | 0
++    VLD1.S32  {D30, D31}, [R12]        @ Q15   :  -45824   |    34816   |  -57984 |     X
++
++    /*-------------------------------------------------------------------------
++     *  Load the 5th parameter via stack
++     *  R0 ~ R3 are used to pass the first 4 parameters, the 5th and above
++     *  parameters are passed via stack
++     * ------------------------------------------------------------------------ */
++    LDR R12, [SP, #4]                  @ LR is the only one that has been pushed
++                                       @ into stack, increment SP by 4 to
++                                       @ get the parameter.
++                                       @ LDMIB SP, {R12} is an equivalent
++                                       @ instruction in this case, where only
++                                       @ one register was pushed into stack.
++
++    /*-------------------------------------------------------------------------
++     *  Load clamping parameters to duplicate vector elements
++     * ------------------------------------------------------------------------ */
++    VDUP.S16  Q4,  D7[1]               @ Q4:  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0
++    VDUP.S16  Q5,  D7[2]               @ Q5: 255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    /*-------------------------------------------------------------------------
++     *  Read bias
++     * ------------------------------------------------------------------------ */
++    VDUP.S32  Q0,   D30[0]             @ Q0:  -45824 | -45824 | -45824 | -45824
++    VDUP.S32  Q1,   D30[1]             @ Q1:   34816 |  34816 |  34816 |  34816
++    VDUP.S32  Q2,   D31[0]             @ Q2:  -70688 | -70688 | -70688 | -70688
++
++
++    /*-------------------------------------------------------------------------
++     *  The main loop
++     * ------------------------------------------------------------------------ */
++loop_yyvup2bgr888:
++
++    /*-------------------------------------------------------------------------
++     *  Load input from Y, V and U
++     *  D12, D13: Y0 Y2 Y4 Y6 Y8 Y10 Y12 Y14, Y1 Y3 Y5 Y7 Y9 Y11 Y13 Y15
++     *  D14  : V0  V1  V2  V3  V4  V5  V6  V7
++     *  D15  : U0  U1  U2  U3  U4  U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VLD2.U8  {D12,D13}, [p_y]!         @ Load 16 Luma elements (uint8) to D12, D13
++    VLD1.U8  {D14},  [p_cr]!           @ Load 8 Cr elements (uint8) to D14
++    VLD1.U8  {D15},  [p_cb]!           @ Load 8 Cb elements (uint8) to D15
++
++    /*-------------------------------------------------------------------------
++     *  Expand uint8 value to uint16
++     *  D24, D25: Y0 Y2 Y4 Y6 Y8 Y10 Y12 Y14
++     *  D26, D27: Y1 Y3 Y5 Y7 Y9 Y11 Y13 Y15
++     *  D28, D29: V0 V1 V2 V3 V4 V5  V6  V7
++     *  D30, D31: U0 U1 U2 U3 U4 U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VMOVL.U8 Q12, D12
++    VMOVL.U8 Q13, D13
++    VMOVL.U8 Q14, D14
++    VMOVL.U8 Q15, D15
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q6, D28, D6[0]          @ Q6:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q7, D30, D6[1]          @ Q7: -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q7, D28, D6[2]          @ q7: -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q8, D30, D6[3]          @ q8:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q6, Q0                   @ Q6 add Red   bias -45824
++    VADD.S32  Q7, Q1                   @ Q7 add Green bias  34816
++    VADD.S32  Q8, Q2                   @ Q8 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMOV.S32   Q9, Q6
++    VMLAL.S16  Q6, D24, D7[0]          @ Q6: R0, R2, R4, R6 in 32-bit Q8 format
++    VMLAL.S16  Q9, D26, D7[0]          @ Q9: R1, R3, R5, R7 in 32-bit Q8 format
++
++    VMOV.S32   Q10, Q7
++    VMLAL.S16  Q7,  D24, D7[0]         @ Q7:  G0, G2, G4, G6 in 32-bit Q8 format
++    VMLAL.S16  Q10, D26, D7[0]         @ Q10: G1, G3, G5, G7 in 32-bit Q8 format
++
++    VMOV.S32   Q11, Q8
++    VMLAL.S16  Q8,  D24, D7[0]         @ Q8:  B0, B2, B4, B6 in 32-bit Q8 format
++    VMLAL.S16  Q11, D26, D7[0]         @ Q11: B1, B3, B5, B7 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D12, Q6,  #8           @ D12: R0 R2 R4 R6 in 16-bit Q0 format
++    VSHRN.S32   D13, Q9,  #8           @ D13: R1 R3 R5 R7 in 16-bit Q0 format
++    VZIP.16     D12, D13               @ Q6 : R0 R1 R2 R3 R4 R5 R6 R7
++
++    VSHRN.S32   D18, Q7,  #8           @ D18: G0 G2 G4 G6 in 16-bit Q0 format
++    VSHRN.S32   D19, Q10, #8           @ D19: G1 G3 G5 G7 in 16-bit Q0 format
++    VZIP.16     D18, D19               @ Q9 : G0 G1 G2 G3 G4 G5 G6 G7
++
++    VSHRN.S32   D20, Q8,  #8           @ D20: B0 B2 B4 B6 in 16-bit Q0 format
++    VSHRN.S32   D21, Q11, #8           @ D21: B1 B3 B5 B7 in 16-bit Q0 format
++    VZIP.16     D20, D21               @ Q10: B0 B1 B2 B3 B4 B5 B6 B7
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D23, Q10             @ store Blue to D23, narrow the value from int16 to int8
++
++    VMAX.S16  Q9, Q9, Q4               @ if Q9 <   0, Q9 =   0
++    VMIN.S16  Q9, Q9, Q5               @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16  D22, Q9               @ store Green to D22, narrow the value from int16 to int8
++
++    VMAX.S16  Q6, Q6, Q4               @ if Q6 <   0, Q6 =   0
++    VMIN.S16  Q6, Q6, Q5               @ if Q6 > 255, Q6 = 255
++    VQMOVUN.S16  D21, Q6               @ store Red to D21, narrow the value from int16 to int8
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yyvup2bgr888         @ jump to trailing processing if remaining length is less than 8
++
++    VST3.U8  {D21,D22,D23}, [p_bgr]!   @ vector store Blue, Green, Red to destination
++                                       @ Red at LSB
++
++    BEQ  end_yyvup2bgr888              @ done if exactly 8 pixel processed in the loop
++
++    /*-------------------------------------------------------------------------
++     *  Done with the first 8 elements, continue on the next 8 elements
++     * ------------------------------------------------------------------------ */
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q6, D29, D6[0]          @ Q6: 359*(V4,V5,V6,V7)       Red
++    VMULL.S16  Q7, D31, D6[1]          @ Q7: -88*(U4,U5,U6,U7)      Green
++    VMLAL.S16  Q7, D29, D6[2]          @ Q7: -88*(U4,U5,U6,U7) - 183*(V4,V5,V6,V7)
++    VMULL.S16  Q8, D31, D6[3]          @ Q8: 454*(U4,U5,U6,U7)       Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q6, Q0                   @ Q6 add Red   bias -45824
++    VADD.S32  Q7, Q1                   @ Q7 add Green bias  34816
++    VADD.S32  Q8, Q2                   @ Q8 add Blue  bias -70688
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMOV.S32   Q9, Q6
++    VMLAL.S16  Q6, D25, D7[0]          @ Q6: R8 R10 R12 R14 in 32-bit Q8 format
++    VMLAL.S16  Q9, D27, D7[0]          @ Q9: R9 R11 R13 R15 in 32-bit Q8 format
++
++    VMOV.S32   Q10, Q7
++    VMLAL.S16  Q7,  D25, D7[0]         @ Q7: G0, G2, G4, G6 in 32-bit Q8 format
++    VMLAL.S16  Q10, D27, D7[0]         @ Q10 : G1, G3, G5, G7 in 32-bit Q8 format
++
++    VMOV.S32   Q11, Q8
++    VMLAL.S16  Q8,  D25, D7[0]         @ Q8: B0, B2, B4, B6 in 32-bit Q8 format
++    VMLAL.S16  Q11, D27, D7[0]         @ Q11 : B1, B3, B5, B7 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D12, Q6,  #8           @ D12: R8 R10 R12 R14 in 16-bit Q0 format
++    VSHRN.S32   D13, Q9,  #8           @ D13: R9 R11 R13 R15 in 16-bit Q0 format
++    VZIP.16     D12, D13               @ Q6: R8 R9 R10 R11 R12 R13 R14 R15
++
++    VSHRN.S32   D18, Q7,  #8           @ D18: G8 G10 G12 G14 in 16-bit Q0 format
++    VSHRN.S32   D19, Q10, #8           @ D19: G9 G11 G13 G15 in 16-bit Q0 format
++    VZIP.16     D18, D19               @ Q9:  G8 G9 G10 G11 G12 G13 G14 G15
++
++    VSHRN.S32   D20, Q8,  #8           @ D20: B8 B10 B12 B14 in 16-bit Q0 format
++    VSHRN.S32   D21, Q11, #8           @ D21: B9 B11 B13 B15 in 16-bit Q0 format
++    VZIP.16     D20, D21               @ Q10: B8 B9 B10 B11 B12 B13 B14 B15
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D23, Q10             @ store Blue to D23, narrow the value from int16 to int8
++
++    VMAX.S16  Q9, Q9, Q4               @ if Q9 <   0, Q9 =   0
++    VMIN.S16  Q9, Q9, Q5               @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16  D22, Q9               @ store Green to D22, narrow the value from int16 to int8
++
++    VMAX.S16  Q6, Q6, Q4               @ if Q6 <   0, Q6 =   0
++    VMIN.S16  Q6, Q6, Q5               @ if Q6 > 255, Q6 = 255
++    VQMOVUN.S16  D21, Q6               @ store Red to D21, narrow the value from int16 to int8
++
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yyvup2bgr888         @ jump to trailing processing if remaining length is less than 8
++
++    VST3.U8  {D21,D22,D23}, [p_bgr]!   @ vector store Blue, Green, Red to destination
++                                       @ Red at LSB
++
++    BHI loop_yyvup2bgr888              @ loop if more than 8 pixels left
++
++    BEQ  end_yyvup2bgr888              @ done if exactly 8 pixel processed in the loop
++
++
++trailing_yyvup2bgr888:
++    /*-------------------------------------------------------------------------
++     *  There are from 1 ~ 7 pixels left in the trailing part.
++     *  First adding 7 to the length so the length would be from 0 ~ 6.
++     *  eg: 1 pixel left in the trailing part, so 1-8+7 = 0.
++     *  Then save 1 pixel unconditionally since at least 1 pixels left in the
++     *  trailing part.
++     * ------------------------------------------------------------------------ */
++    ADDS length, length, #7            @ there are 7 or less in the trailing part
++
++    VST3.U8 {D21[0],D22[0],D23[0]}, [p_bgr]! @ at least 1 pixel left in the trailing part
++    BEQ end_yyvup2bgr888               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST3.U8 {D21[1],D22[1],D23[1]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2bgr888               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST3.U8 {D21[2],D22[2],D23[2]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2bgr888               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST3.U8 {D21[3],D22[3],D23[3]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2bgr888               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST3.U8 {D21[4],D22[4],D23[4]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2bgr888               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST3.U8 {D21[5],D22[5],D23[5]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2bgr888               @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST3.U8 {D21[6],D22[6],D23[6]}, [p_bgr]!  @ store one more pixel
++
++end_yyvup2bgr888:
++    LDMFD SP!, {PC}
++
++                                       @ end of yyvup2bgr888
++
++/*--------------------------------------------------------------------------
++* FUNCTION     : yvup2abgr8888_venum
++*--------------------------------------------------------------------------
++* DESCRIPTION  : Perform YVU planar to ABGR8888 conversion.
++*--------------------------------------------------------------------------
++* C PROTOTYPE  : void yvup2abgr8888_venum(uint8_t  *p_y,
++*                                 uint8_t  *p_cr,
++*                                 uint8_t  *p_cb,
++*                                 uint8_t  *p_abgr8888,
++*                                 uint32_t  length)
++*--------------------------------------------------------------------------
++* REG INPUT    : R0: uint8_t  *p_y
++*                      pointer to the input Y Line
++*                R1: uint8_t  *p_cr
++*                      pointer to the input Cr Line
++*                R2: uint8_t  *p_cb
++*                      pointer to the input Cb Line
++*                R3: uint8_t  *p_abgr8888
++*                      pointer to the output ABGR Line
++*                R12: uint32_t  length
++*                      width of Line
++*--------------------------------------------------------------------------
++* STACK ARG    : None
++*--------------------------------------------------------------------------
++* REG OUTPUT   : None
++*--------------------------------------------------------------------------
++* MEM INPUT    : p_y      - a line of Y pixels
++*                p_cr     - a line of Cr pixels
++*                p_cb     - a line of Cb pixels
++*                length   - the width of the input line
++*--------------------------------------------------------------------------
++* MEM OUTPUT   : p_abgr8888 - the converted ABGR pixels
++*--------------------------------------------------------------------------
++* REG AFFECTED : ARM:  R0-R4, R12
++*                NEON: Q0-Q15
++*--------------------------------------------------------------------------
++* STACK USAGE  : none
++*--------------------------------------------------------------------------
++* CYCLES       : none
++*
++*--------------------------------------------------------------------------
++* NOTES        :
++*--------------------------------------------------------------------------
++*/
++.type yvup2abgr8888_venum, %function
++yvup2abgr8888_venum:
++    /*-------------------------------------------------------------------------
++     *  Store stack registers
++     * ------------------------------------------------------------------------ */
++    STMFD SP!, {LR}
++
++    PLD [R0, R3]                       @ preload luma line
++
++    ADR   R12, constants
++
++    VLD1.S16  {D6, D7}, [R12]!         @ D6, D7: 359 |  -88 | -183 | 454 | 256 | 0 | 255 | 0
++    VLD1.S32  {D30, D31}, [R12]        @ Q15   :  -45824    |    34816   |  -57984 |     X
++
++    /*-------------------------------------------------------------------------
++     *  Load the 5th parameter via stack
++     *  R0 ~ R3 are used to pass the first 4 parameters, the 5th and above
++     *  parameters are passed via stack
++     * ------------------------------------------------------------------------ */
++    LDR R12, [SP, #4]                  @ LR is the only one that has been pushed
++                                       @ into stack, increment SP by 4 to
++                                       @ get the parameter.
++                                       @ LDMIB SP, {R12} is an equivalent
++                                       @ instruction in this case, where only
++                                       @ one register was pushed into stack.
++
++    /*-------------------------------------------------------------------------
++     *  Load clamping parameters to duplicate vector elements
++     * ------------------------------------------------------------------------ */
++    VDUP.S16  Q4,  D7[1]               @ Q4:  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0
++    VDUP.S16  Q5,  D7[2]               @ Q5: 255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    /*-------------------------------------------------------------------------
++     *  Read bias
++     * ------------------------------------------------------------------------ */
++    VDUP.S32  Q0,   D30[0]             @ Q0:  -45824 | -45824 | -45824 | -45824
++    VDUP.S32  Q1,   D30[1]             @ Q1:   34816 |  34816 |  34816 |  34816
++    VDUP.S32  Q2,   D31[0]             @ Q2:  -70688 | -70688 | -70688 | -70688
++
++
++    /*-------------------------------------------------------------------------
++     *  The main loop
++     * ------------------------------------------------------------------------ */
++loop_yvup2abgr:
++
++    /*-------------------------------------------------------------------------
++     *  Load input from Y, V and U
++     *  D12  : Y0  Y1  Y2  Y3  Y4  Y5  Y6  Y7
++     *  D14  : V0  V1  V2  V3  V4  V5  V6  V7
++     *  D15  : U0  U1  U2  U3  U4  U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VLD1.U8  {D12},  [p_y]!            @ Load 8 Luma elements (uint8) to D12
++    VLD1.U8  {D14},  [p_cr]!           @ Load 8 Cr elements (uint8) to D14
++    VLD1.U8  {D15},  [p_cb]!           @ Load 8 Cb elements (uint8) to D15
++
++    /*-------------------------------------------------------------------------
++     *  Expand uint8 value to uint16
++     *  D18, D19: Y0 Y1 Y2 Y3 Y4 Y5 Y6 Y7
++     *  D20, D21: V0 V1 V2 V3 V4 V5 V6 V7
++     *  D22, D23: U0 U1 U2 U3 U4 U5 U6 U7
++     * ------------------------------------------------------------------------ */
++    VMOVL.U8 Q9,  D12
++    VMOVL.U8 Q10, D14
++    VMOVL.U8 Q11, D15
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q12, D20, D6[0]         @ Q12:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q13, D22, D6[1]         @ Q13:  -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q13, D20, D6[2]         @ Q13:  -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q14, D22, D6[3]         @ Q14:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q12, Q0                  @ Q12 add Red   bias -45824
++    VADD.S32  Q13, Q1                  @ Q13 add Green bias  34816
++    VADD.S32  Q14, Q2                  @ Q14 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMLAL.S16  Q12, D18, D7[0]         @ Q12: R0, R1, R2, R3 in 32-bit Q8 format
++    VMLAL.S16  Q13, D18, D7[0]         @ Q13: G0, G1, G2, G3 in 32-bit Q8 format
++    VMLAL.S16  Q14, D18, D7[0]         @ Q14: B0, B1, B2, B3 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D18 , Q12, #8          @ D18: R0, R1, R2, R3 in 16-bit Q0 format
++    VSHRN.S32   D20 , Q13, #8          @ D20: G0, G1, G2, G3 in 16-bit Q0 format
++    VSHRN.S32   D22,  Q14, #8          @ D22: B0, B1, B2, B3 in 16-bit Q0 format
++
++    /*-------------------------------------------------------------------------
++     *  Done with the first 4 elements, continue on the next 4 elements
++     * ------------------------------------------------------------------------ */
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q12, D21, D6[0]         @ Q12:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q13, D23, D6[1]         @ Q13: -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q13, D21, D6[2]         @ Q13: -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q14, D23, D6[3]         @ Q14:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q12, Q0                  @ Q12 add Red   bias -45824
++    VADD.S32  Q13, Q1                  @ Q13 add Green bias  34816
++    VADD.S32  Q14, Q2                  @ Q14 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMLAL.S16  Q12, D19, D7[0]         @ Q12: R0, R1, R2, R3 in 32-bit Q8 format
++    VMLAL.S16  Q13, D19, D7[0]         @ Q13: G0, G1, G2, G3 in 32-bit Q8 format
++    VMLAL.S16  Q14, D19, D7[0]         @ Q14: B0, B1, B2, B3 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D19 , Q12, #8          @ D18: R0, R1, R2, R3 in 16-bit Q0 format
++    VSHRN.S32   D21 , Q13, #8          @ D20: G0, G1, G2, G3 in 16-bit Q0 format
++    VSHRN.S32   D23,  Q14, #8          @ D22: B0, B1, B2, B3 in 16-bit Q0 format
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q11, Q11, Q4             @ if Q11 <   0, Q11 =   0
++    VMIN.S16  Q11, Q11, Q5             @ if Q11 > 255, Q11 = 255
++    VQMOVUN.S16   D28, Q11             @ store Blue to D28, narrow the value from int16 to int8
++
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D27, Q10             @ store Green to D27, narrow the value from int16 to int8
++
++    VMAX.S16    Q9, Q9, Q4             @ if Q9 <   0, Q9 =   0
++    VMIN.S16    Q9, Q9, Q5             @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16    D26, Q9             @ store Red to D26, narrow the value from int16 to int8
++
++    /*-------------------------------------------------------------------------
++     *  abgr format with leading 0xFF byte
++     * ------------------------------------------------------------------------ */
++    VMOVN.I16  D29, Q5                 @ D29:  255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yvup2abgr            @ jump to trailing processing if remaining length is less than 8
++
++    VST4.U8  {D26,D27,D28,D29}, [p_bgr]!   @ vector store Red, Green, Blue to destination
++                                       @ Blue at LSB
++
++    BHI loop_yvup2abgr                 @ loop if more than 8 pixels left
++
++    BEQ  end_yvup2abgr                 @ done if exactly 8 pixel processed in the loop
++
++
++trailing_yvup2abgr:
++    /*-------------------------------------------------------------------------
++     *  There are from 1 ~ 7 pixels left in the trailing part.
++     *  First adding 7 to the length so the length would be from 0 ~ 6.
++     *  eg: 1 pixel left in the trailing part, so 1-8+7 = 0.
++     *  Then save 1 pixel unconditionally since at least 1 pixels left in the
++     *  trailing part.
++     * ------------------------------------------------------------------------ */
++    ADDS length, length, #7            @ there are 7 or less in the trailing part
++
++    VST4.U8 {D26[0], D27[0], D28[0], D29[0]}, [p_bgr]! @ at least 1 pixel left in the trailing part
++    BEQ  end_yvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D26[1], D27[1], D28[1], D29[1]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D26[2], D27[2], D28[2], D29[2]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D26[3], D27[3], D28[3], D29[3]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D26[4], D27[4], D28[4], D29[4]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D26[5], D27[5], D28[5], D29[5]}, [p_bgr]!  @ store one more pixel
++    BEQ  end_yvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D26[6], D27[6], D28[6], D29[6]}, [p_bgr]! @ store one more pixel
++
++end_yvup2abgr:
++    LDMFD SP!, {PC}
++                                       @ end of yvup2abgr
++
++/*--------------------------------------------------------------------------
++* FUNCTION     : yyvup2abgr8888_venum
++*--------------------------------------------------------------------------
++* DESCRIPTION  : Perform YYVU planar to ABGR8888 conversion.
++*--------------------------------------------------------------------------
++* C PROTOTYPE  : void yyvup2abgr8888_venum(uint8_t  *p_y,
++*                                 uint8_t  *p_cr,
++*                                 uint8_t  *p_cb,
++*                                 uint8_t  *p_abgr8888,
++*                                 uint32_t  length)
++*--------------------------------------------------------------------------
++* REG INPUT    : R0: uint8_t  *p_y
++*                      pointer to the input Y Line
++*                R1: uint8_t  *p_cr
++*                      pointer to the input Cr Line
++*                R2: uint8_t  *p_cb
++*                      pointer to the input Cb Line
++*                R3: uint8_t  *p_abgr8888
++*                      pointer to the output ABGR Line
++*                R12: uint32_t  length
++*                      width of Line
++*--------------------------------------------------------------------------
++* STACK ARG    : None
++*--------------------------------------------------------------------------
++* REG OUTPUT   : None
++*--------------------------------------------------------------------------
++* MEM INPUT    : p_y      - a line of Y pixels
++*                p_cr     - a line of Cr pixels
++*                p_cb     - a line of Cb pixels
++*                length   - the width of the input line
++*--------------------------------------------------------------------------
++* MEM OUTPUT   : p_abgr8888 - the converted ABGR pixels
++*--------------------------------------------------------------------------
++* REG AFFECTED : ARM:  R0-R4, R12
++*                NEON: Q0-Q15
++*--------------------------------------------------------------------------
++* STACK USAGE  : none
++*--------------------------------------------------------------------------
++* CYCLES       : none
++*
++*--------------------------------------------------------------------------
++* NOTES        :
++*--------------------------------------------------------------------------
++*/
++.type yyvup2abgr8888_venum, %function
++yyvup2abgr8888_venum:
++    /*-------------------------------------------------------------------------
++     *  Store stack registers
++     * ------------------------------------------------------------------------ */
++    STMFD SP!, {LR}
++
++    PLD [R0, R3]                       @ preload luma line
++
++    ADR   R12, constants
++
++    VLD1.S16  {D6, D7}, [R12]!         @ D6, D7: 359 |  -88 | -183 | 454 | 256 | 0 | 255 | 0
++    VLD1.S32  {D30, D31}, [R12]        @ Q15   :  -45824    |    34816   |  -57984 |     X
++
++    /*-------------------------------------------------------------------------
++     *  Load the 5th parameter via stack
++     *  R0 ~ R3 are used to pass the first 4 parameters, the 5th and above
++     *  parameters are passed via stack
++     * ------------------------------------------------------------------------ */
++    LDR R12, [SP, #4]                  @ LR is the only one that has been pushed
++                                       @ into stack, increment SP by 4 to
++                                       @ get the parameter.
++                                       @ LDMIB SP, {R12} is an equivalent
++                                       @ instruction in this case, where only
++                                       @ one register was pushed into stack.
++
++    /*-------------------------------------------------------------------------
++     *  Load clamping parameters to duplicate vector elements
++     * ------------------------------------------------------------------------ */
++    VDUP.S16  Q4,  D7[1]               @ Q4:  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0
++    VDUP.S16  Q5,  D7[2]               @ Q5: 255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    /*-------------------------------------------------------------------------
++     *  Read bias
++     * ------------------------------------------------------------------------ */
++    VDUP.S32  Q0,   D30[0]             @ Q0:  -45824 | -45824 | -45824 | -45824
++    VDUP.S32  Q1,   D30[1]             @ Q1:   34816 |  34816 |  34816 |  34816
++    VDUP.S32  Q2,   D31[0]             @ Q2:  -70688 | -70688 | -70688 | -70688
++
++
++    /*-------------------------------------------------------------------------
++     *  The main loop
++     * ------------------------------------------------------------------------ */
++loop_yyvup2abgr:
++
++    /*-------------------------------------------------------------------------
++     *  Load input from Y, V and U
++     *  D12, D13: Y0 Y2 Y4 Y6 Y8 Y10 Y12 Y14, Y1 Y3 Y5 Y7 Y9 Y11 Y13 Y15
++     *  D14  : V0  V1  V2  V3  V4  V5  V6  V7
++     *  D15  : U0  U1  U2  U3  U4  U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VLD2.U8  {D12,D13}, [p_y]!         @ Load 16 Luma elements (uint8) to D12, D13
++    VLD1.U8  {D14},  [p_cr]!           @ Load 8 Cr elements (uint8) to D14
++    VLD1.U8  {D15},  [p_cb]!           @ Load 8 Cb elements (uint8) to D15
++
++    /*-------------------------------------------------------------------------
++     *  Expand uint8 value to uint16
++     *  D24, D25: Y0 Y2 Y4 Y6 Y8 Y10 Y12 Y14
++     *  D26, D27: Y1 Y3 Y5 Y7 Y9 Y11 Y13 Y15
++     *  D28, D29: V0 V1 V2 V3 V4 V5  V6  V7
++     *  D30, D31: U0 U1 U2 U3 U4 U5  U6  U7
++     * ------------------------------------------------------------------------ */
++    VMOVL.U8 Q12, D12
++    VMOVL.U8 Q13, D13
++    VMOVL.U8 Q14, D14
++    VMOVL.U8 Q15, D15
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q6, D28, D6[0]          @ Q6:  359*(V0,V1,V2,V3)     Red
++    VMULL.S16  Q7, D30, D6[1]          @ Q7: -88*(U0,U1,U2,U3)     Green
++    VMLAL.S16  Q7, D28, D6[2]          @ Q7: -88*(U0,U1,U2,U3) - 183*(V0,V1,V2,V3)
++    VMULL.S16  Q8, D30, D6[3]          @ Q8:  454*(U0,U1,U2,U3)     Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q6, Q0                   @ Q6 add Red   bias -45824
++    VADD.S32  Q7, Q1                   @ Q7 add Green bias  34816
++    VADD.S32  Q8, Q2                   @ Q8 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMOV.S32   Q9, Q6
++    VMLAL.S16  Q6, D24, D7[0]          @ Q6: R0, R2, R4, R6 in 32-bit Q8 format
++    VMLAL.S16  Q9, D26, D7[0]          @ Q9: R1, R3, R5, R7 in 32-bit Q8 format
++
++    VMOV.S32   Q10, Q7
++    VMLAL.S16  Q7,  D24, D7[0]         @ Q7:  G0, G2, G4, G6 in 32-bit Q8 format
++    VMLAL.S16  Q10, D26, D7[0]         @ Q10: G1, G3, G5, G7 in 32-bit Q8 format
++
++    VMOV.S32   Q11, Q8
++    VMLAL.S16  Q8,  D24, D7[0]         @ Q8:  B0, B2, B4, B6 in 32-bit Q8 format
++    VMLAL.S16  Q11, D26, D7[0]         @ Q11: B1, B3, B5, B7 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D12, Q6,  #8           @ D12: R0 R2 R4 R6 in 16-bit Q0 format
++    VSHRN.S32   D13, Q9,  #8           @ D13: R1 R3 R5 R7 in 16-bit Q0 format
++    VZIP.16     D12, D13               @ Q6 : R0 R1 R2 R3 R4 R5 R6 R7
++
++    VSHRN.S32   D18, Q7,  #8           @ D18: G0 G2 G4 G6 in 16-bit Q0 format
++    VSHRN.S32   D19, Q10, #8           @ D19: G1 G3 G5 G7 in 16-bit Q0 format
++    VZIP.16     D18, D19               @ Q9 : G0 G1 G2 G3 G4 G5 G6 G7
++
++    VSHRN.S32   D20, Q8,  #8           @ D20: B0 B2 B4 B6 in 16-bit Q0 format
++    VSHRN.S32   D21, Q11, #8           @ D21: B1 B3 B5 B7 in 16-bit Q0 format
++    VZIP.16     D20, D21               @ Q10: B0 B1 B2 B3 B4 B5 B6 B7
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D23, Q10             @ store Blue to D23, narrow the value from int16 to int8
++
++    VMAX.S16  Q9, Q9, Q4               @ if Q9 <   0, Q9 =   0
++    VMIN.S16  Q9, Q9, Q5               @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16  D22, Q9               @ store Green to D22, narrow the value from int16 to int8
++
++    VMAX.S16  Q6, Q6, Q4               @ if Q6 <   0, Q6 =   0
++    VMIN.S16  Q6, Q6, Q5               @ if Q6 > 255, Q6 = 255
++    VQMOVUN.S16  D21, Q6               @ store Red to D21, narrow the value from int16 to int8
++
++    /*-------------------------------------------------------------------------
++     *  abgr format with leading 0xFF byte
++     * ------------------------------------------------------------------------ */
++    VMOVN.I16  D24, Q5                 @ D24:  255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yyvup2abgr           @ jump to trailing processing if remaining length is less than 8
++
++    VST4.U8  {D21,D22,D23,D24}, [p_bgr]!   @ vector store Blue, Green, Red to destination
++                                       @ Red at LSB
++
++    BEQ  end_yyvup2abgr                @ done if exactly 8 pixel processed in the loop
++
++
++    /*-------------------------------------------------------------------------
++     *  Done with the first 8 elements, continue on the next 8 elements
++     * ------------------------------------------------------------------------ */
++
++    /*-------------------------------------------------------------------------
++     *  Multiply contribution from chrominance, results are in 32-bit
++     * ------------------------------------------------------------------------ */
++    VMULL.S16  Q6, D29, D6[0]          @ Q6: 359*(V4,V5,V6,V7)       Red
++    VMULL.S16  Q7, D31, D6[1]          @ Q7: -88*(U4,U5,U6,U7)      Green
++    VMLAL.S16  Q7, D29, D6[2]          @ Q7: -88*(U4,U5,U6,U7) - 183*(V4,V5,V6,V7)
++    VMULL.S16  Q8, D31, D6[3]          @ Q8: 454*(U4,U5,U6,U7)       Blue
++
++    /*-------------------------------------------------------------------------
++     *  Add bias
++     * ------------------------------------------------------------------------ */
++    VADD.S32  Q6, Q0                   @ Q6 add Red   bias -45824
++    VADD.S32  Q7, Q1                   @ Q7 add Green bias  34816
++    VADD.S32  Q8, Q2                   @ Q8 add Blue  bias -57984
++
++    /*-------------------------------------------------------------------------
++     *  Calculate Red, Green, Blue
++     * ------------------------------------------------------------------------ */
++    VMOV.S32   Q9, Q6
++    VMLAL.S16  Q6, D25, D7[0]          @ Q6: R8 R10 R12 R14 in 32-bit Q8 format
++    VMLAL.S16  Q9, D27, D7[0]          @ Q9: R9 R11 R13 R15 in 32-bit Q8 format
++
++    VMOV.S32   Q10, Q7
++    VMLAL.S16  Q7,  D25, D7[0]         @ Q7: G0, G2, G4, G6 in 32-bit Q8 format
++    VMLAL.S16  Q10, D27, D7[0]         @ Q10 : G1, G3, G5, G7 in 32-bit Q8 format
++
++    VMOV.S32   Q11, Q8
++    VMLAL.S16  Q8,  D25, D7[0]         @ Q8: B0, B2, B4, B6 in 32-bit Q8 format
++    VMLAL.S16  Q11, D27, D7[0]         @ Q11 : B1, B3, B5, B7 in 32-bit Q8 format
++
++    /*-------------------------------------------------------------------------
++     *  Right shift eight bits with rounding
++     * ------------------------------------------------------------------------ */
++    VSHRN.S32   D12, Q6,  #8           @ D12: R8 R10 R12 R14 in 16-bit Q0 format
++    VSHRN.S32   D13, Q9,  #8           @ D13: R9 R11 R13 R15 in 16-bit Q0 format
++    VZIP.16     D12, D13               @ Q6: R8 R9 R10 R11 R12 R13 R14 R15
++
++    VSHRN.S32   D18, Q7,  #8           @ D18: G8 G10 G12 G14 in 16-bit Q0 format
++    VSHRN.S32   D19, Q10, #8           @ D19: G9 G11 G13 G15 in 16-bit Q0 format
++    VZIP.16     D18, D19               @ Q9:  G8 G9 G10 G11 G12 G13 G14 G15
++
++    VSHRN.S32   D20, Q8,  #8           @ D20: B8 B10 B12 B14 in 16-bit Q0 format
++    VSHRN.S32   D21, Q11, #8           @ D21: B9 B11 B13 B15 in 16-bit Q0 format
++    VZIP.16     D20, D21               @ Q10: B8 B9 B10 B11 B12 B13 B14 B15
++
++    /*-------------------------------------------------------------------------
++     *  Clamp the value to be within [0~255]
++     * ------------------------------------------------------------------------ */
++    VMAX.S16  Q10, Q10, Q4             @ if Q10 <   0, Q10 =   0
++    VMIN.S16  Q10, Q10, Q5             @ if Q10 > 255, Q10 = 255
++    VQMOVUN.S16   D23, Q10             @ store Blue to D23, narrow the value from int16 to int8
++
++    VMAX.S16  Q9, Q9, Q4               @ if Q9 <   0, Q9 =   0
++    VMIN.S16  Q9, Q9, Q5               @ if Q9 > 255, Q9 = 255
++    VQMOVUN.S16  D22, Q9               @ store Green to D22, narrow the value from int16 to int8
++
++    VMAX.S16  Q6, Q6, Q4               @ if Q6 <   0, Q6 =   0
++    VMIN.S16  Q6, Q6, Q5               @ if Q6 > 255, Q6 = 255
++    VQMOVUN.S16  D21, Q6               @ store Red to D21, narrow the value from int16 to int8
++
++    /*-------------------------------------------------------------------------
++     *  abgr format with leading 0xFF byte
++     * ------------------------------------------------------------------------ */
++    VMOVN.I16  D24, Q5                 @ D24:  255 | 255 | 255 | 255 | 255 | 255 | 255 | 255
++
++    SUBS length, length, #8            @ check if the length is less than 8
++
++    BMI  trailing_yyvup2abgr           @ jump to trailing processing if remaining length is less than 8
++
++    VST4.U8  {D21,D22,D23,D24}, [p_bgr]!   @ vector store Blue, Green, Red to destination
++                                       @ Red at LSB
++
++    BHI loop_yyvup2abgr                @ loop if more than 8 pixels left
++
++    BEQ  end_yyvup2abgr                @ done if exactly 8 pixel processed in the loop
++
++
++trailing_yyvup2abgr:
++    /*-------------------------------------------------------------------------
++     *  There are from 1 ~ 7 pixels left in the trailing part.
++     *  First adding 7 to the length so the length would be from 0 ~ 6.
++     *  eg: 1 pixel left in the trailing part, so 1-8+7 = 0.
++     *  Then save 1 pixel unconditionally since at least 1 pixels left in the
++     *  trailing part.
++     * ------------------------------------------------------------------------ */
++    ADDS length, length, #7            @ there are 7 or less in the trailing part
++
++    VST4.U8 {D21[0],D22[0],D23[0],D24[0]}, [p_bgr]! @ at least 1 pixel left in the trailing part
++    BEQ end_yyvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D21[1],D22[1],D23[1],D24[1]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D21[2],D22[2],D23[2],D24[2]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D21[3],D22[3],D23[3],D24[3]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D21[4],D22[4],D23[4],D24[4]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D21[5],D22[5],D23[5],D24[5]}, [p_bgr]!  @ store one more pixel
++    BEQ end_yyvup2abgr                 @ done if 0 pixel left
++
++    SUBS length, length, #1            @ update length counter
++    VST4.U8 {D21[6],D22[6],D23[6],D24[6]}, [p_bgr]!  @ store one more pixel
++
++end_yyvup2abgr:
++    LDMFD SP!, {PC}
++                                       @ end of yyvup2abgr
++
++.end
+--- libjpeg-turbo-1.1.1.orig/simd/Makefile.am
++++ libjpeg-turbo-1.1.1/simd/Makefile.am
+@@ -6,6 +6,20 @@ EXTRA_DIST = nasm_lt.sh jcclrmmx.asm jcc
+ 	jdmrgmmx.asm jdmrgss2.asm jcclrss2-64.asm jdclrss2-64.asm \
+ 	jdmrgss2-64.asm CMakeLists.txt
+ 
++if SIMD_ARM_NEON
++
++AM_CFLAGS = -march=armv7-a -mfpu=neon
++AM_CCASFLAGS = -march=armv7-a -mfpu=neon
++
++libsimd_la_SOURCES = jsimd_arm_neon.c \
++                     jdcolor-armv7.s \
++                     jdidct-armv7.s
++
++jdcolor-armv7.lo: jdcolor-armv7.s
++jdidct-armv7.lo: jdidct-armv7.s
++
++endif
++
+ if SIMD_X86_64
+ 
+ libsimd_la_SOURCES = jsimd_x86_64.c \
+@@ -21,6 +35,10 @@ libsimd_la_SOURCES = jsimd_x86_64.c \
+ jccolss2-64.lo: jcclrss2-64.asm
+ jdcolss2-64.lo: jdclrss2-64.asm
+ jdmerss2-64.lo: jdmrgss2-64.asm
++
++.asm.lo:
++	$(LIBTOOL) --mode=compile --tag NASM $(srcdir)/nasm_lt.sh $(NASM) $(NAFLAGS) -I$(srcdir) $< -o $@
++
+ endif
+ 
+ if SIMD_I386
+@@ -47,12 +65,14 @@ jdcolmmx.lo: jdclrmmx.asm
+ jdcolss2.lo: jdclrss2.asm
+ jdmermmx.lo: jdmrgmmx.asm
+ jdmerss2.lo: jdmrgss2.asm
++
++.asm.lo:
++	$(LIBTOOL) --mode=compile --tag NASM $(srcdir)/nasm_lt.sh $(NASM) $(NAFLAGS) -I$(srcdir) $< -o $@
++
+ endif
+ 
+ AM_CPPFLAGS = -I$(top_srcdir) 
+ 
+-.asm.lo:
+-	$(LIBTOOL) --mode=compile --tag NASM $(srcdir)/nasm_lt.sh $(NASM) $(NAFLAGS) -I$(srcdir) $< -o $@
+ 
+ jsimdcfg.inc: $(srcdir)/jsimdcfg.inc.h ../jpeglib.h ../jconfig.h ../jmorecfg.h
+ 	$(CPP) -I$(top_builddir) -I$(top_builddir)/simd $(srcdir)/jsimdcfg.inc.h | $(EGREP) "^[\;%]|^\ %" | sed 's%_cpp_protection_%%' | sed 's@% define@%define@g' > $@
+--- /dev/null
++++ libjpeg-turbo-1.1.1/simd/jsimd_arm_neon.c
+@@ -0,0 +1,564 @@
++/*
++ * jsimd_arm_neon.c
++ *
++ * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
++ * Copyright 2009 D. R. Commander
++ * Copyright 2011 Mandeep Kumar <mandeep.kumar@linaro.org> 
++ * 
++ * Based on the x86 SIMD extension for IJG JPEG library,
++ * Copyright (C) 1999-2006, MIYASAKA Masaru.
++ * For conditions of distribution and use, see copyright notice in jsimdext.inc
++ *
++ * This file contain ARM NEON optimized routines. 
++ */
++
++#define JPEG_INTERNALS
++#include "../jinclude.h"
++#include "../jpeglib.h"
++#include "../jsimd.h"
++#include "../jdct.h"
++#include "../jsimddct.h"
++
++
++/* Private subobject */
++
++typedef struct {
++  struct jpeg_color_deconverter pub; /* public fields */
++
++  /* Private state for YCC->RGB conversion */
++  int * Cr_r_tab;		/* => table for Cr to R conversion */
++  int * Cb_b_tab;		/* => table for Cb to B conversion */
++  INT32 * Cr_g_tab;		/* => table for Cr to G conversion */
++  INT32 * Cb_g_tab;		/* => table for Cb to G conversion */
++} my_color_deconverter;
++
++typedef my_color_deconverter * my_cconvert_ptr;
++
++
++#define DEQUANTIZE(coef,quantval)  ((coef) * ((INT16)quantval))
++
++/* IDCT routines */
++EXTERN (void) idct_1x1_venum (INT16 * coeffPtr, INT16 * samplePtr, INT32 stride);
++EXTERN (void) idct_2x2_venum (INT16 * coeffPtr, INT16 * samplePtr, INT32 stride);
++EXTERN (void) idct_4x4_venum (INT16 * coeffPtr, INT16 * samplePtr, INT32 stride);
++EXTERN (void) idct_8x8_venum (INT16 * coeffPtr, INT16 * samplePtr, INT32 stride);
++
++/* Color conversion routines */
++EXTERN (void) yvup2rgb565_venum (UINT8 *pLumaLine,
++                UINT8 *pCrLine,
++                UINT8 *pCbLine,
++                UINT8 *pRGB565Line,
++                JDIMENSION nLineWidth);
++EXTERN (void) yyvup2rgb565_venum (UINT8 * pLumaLine,
++                UINT8 *pCrLine,
++                UINT8 *pCbLine,
++                UINT8 * pRGB565Line,
++                JDIMENSION nLineWidth);
++EXTERN (void) yvup2bgr888_venum (UINT8 * pLumaLine,
++                UINT8 *pCrLine,
++                UINT8 *pCbLine,
++                UINT8 * pBGR888Line,
++                JDIMENSION nLineWidth);
++EXTERN (void) yyvup2bgr888_venum (UINT8 * pLumaLine,
++                UINT8 *pCrLine,
++                UINT8 *pCbLine,
++                UINT8 * pBGR888Line,
++                JDIMENSION nLineWidth);
++EXTERN (void) yvup2abgr8888_venum (UINT8 * pLumaLine,
++                UINT8 *pCrLine,
++                UINT8 *pCbLine,
++                UINT8 * pABGR888Line,
++                JDIMENSION nLineWidth);
++EXTERN (void) yyvup2abgr8888_venum (UINT8 * pLumaLine,
++                UINT8 *pCrLine,
++                UINT8 *pCbLine,
++                UINT8 * pABGR888Line,
++                JDIMENSION nLineWidth);
++
++
++GLOBAL(int)
++jsimd_can_rgb_ycc (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_ycc_rgb (void)
++{
++  return 1;
++}
++
++GLOBAL(int)
++jsimd_can_idct_islow (void)
++{
++  return 1;
++}
++
++GLOBAL(int)
++jsimd_can_idct_ifast (void)
++{
++  return 1;
++}
++
++GLOBAL(int)
++jsimd_can_idct_float (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_h2v2_downsample (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_h2v1_downsample (void)
++{
++  return 0;
++}
++GLOBAL(int)
++jsimd_can_h2v2_upsample (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_h2v1_upsample (void)
++{
++  return 0;
++}
++GLOBAL(int)
++jsimd_can_h2v2_fancy_upsample (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_h2v1_fancy_upsample (void)
++{
++  return 0;
++}
++GLOBAL(int)
++jsimd_can_h2v2_merged_upsample (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_h2v1_merged_upsample (void)
++{
++  return 0;
++}
++GLOBAL(int)
++jsimd_can_convsamp (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_convsamp_float (void)
++{
++  return 0;
++}
++GLOBAL(int)
++jsimd_can_fdct_islow (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_fdct_ifast (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_fdct_float (void)
++{
++  return 0;
++}
++GLOBAL(int)
++jsimd_can_quantize (void)
++{
++  return 0;
++}
++
++GLOBAL(int)
++jsimd_can_quantize_float (void)
++{
++  return 0;
++}
++GLOBAL(int)
++jsimd_can_idct_2x2 (void)
++{
++  return 1;
++}
++
++GLOBAL(int)
++jsimd_can_idct_4x4 (void)
++{
++  return 1;
++}
++
++
++
++
++/* Function Implementation */
++
++GLOBAL(void)
++jsimd_rgb_ycc_convert (j_compress_ptr cinfo,
++                       JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
++                       JDIMENSION output_row, int num_rows)
++{
++}
++
++GLOBAL(void)
++jsimd_ycc_rgb_convert (j_decompress_ptr cinfo,
++                       JSAMPIMAGE input_buf, JDIMENSION input_row,
++                       JSAMPARRAY output_buf, int num_rows)
++{
++  my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
++  JSAMPROW inptr0, inptr1, inptr2;
++  JSAMPROW outptr;
++  JDIMENSION row;
++
++  for (row = 0; row < (JDIMENSION)num_rows; row++)
++  {
++    inptr0     = input_buf[0][input_row];
++    inptr1     = input_buf[1][input_row];
++    inptr2     = input_buf[2][input_row];
++
++    input_row++;
++    outptr = *output_buf++;
++
++    yvup2bgr888_venum((UINT8*) inptr0,
++                      (UINT8*) inptr2,
++                      (UINT8*) inptr1,
++                      (UINT8*) outptr,
++                      cinfo->output_width);
++  }
++}
++
++
++
++GLOBAL(void)
++jsimd_h2v2_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
++                       JSAMPARRAY input_data, JSAMPARRAY output_data)
++{
++}
++
++GLOBAL(void)
++jsimd_h2v1_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
++                       JSAMPARRAY input_data, JSAMPARRAY output_data)
++{
++}
++
++
++GLOBAL(void)
++jsimd_h2v2_upsample (j_decompress_ptr cinfo,
++                     jpeg_component_info * compptr, 
++                     JSAMPARRAY input_data,
++                     JSAMPARRAY * output_data_ptr)
++{
++}
++
++GLOBAL(void)
++jsimd_h2v1_upsample (j_decompress_ptr cinfo,
++                     jpeg_component_info * compptr, 
++                     JSAMPARRAY input_data,
++                     JSAMPARRAY * output_data_ptr)
++{
++}
++
++
++GLOBAL(void)
++jsimd_h2v2_fancy_upsample (j_decompress_ptr cinfo,
++                           jpeg_component_info * compptr, 
++                           JSAMPARRAY input_data,
++                           JSAMPARRAY * output_data_ptr)
++{
++}
++
++GLOBAL(void)
++jsimd_h2v1_fancy_upsample (j_decompress_ptr cinfo,
++                           jpeg_component_info * compptr, 
++                           JSAMPARRAY input_data,
++                           JSAMPARRAY * output_data_ptr)
++{
++}
++
++
++GLOBAL(void)
++jsimd_h2v2_merged_upsample (j_decompress_ptr cinfo,
++                            JSAMPIMAGE input_buf,
++                            JDIMENSION in_row_group_ctr,
++                            JSAMPARRAY output_buf)
++{
++}
++
++GLOBAL(void)
++jsimd_h2v1_merged_upsample (j_decompress_ptr cinfo,
++                            JSAMPIMAGE input_buf,
++                            JDIMENSION in_row_group_ctr,
++                            JSAMPARRAY output_buf)
++{
++}
++
++
++GLOBAL(void)
++jsimd_convsamp (JSAMPARRAY sample_data, JDIMENSION start_col,
++                DCTELEM * workspace)
++{
++}
++
++GLOBAL(void)
++jsimd_convsamp_float (JSAMPARRAY sample_data, JDIMENSION start_col,
++                      FAST_FLOAT * workspace)
++{
++}
++
++
++GLOBAL(void)
++jsimd_fdct_islow (DCTELEM * data)
++{
++}
++
++GLOBAL(void)
++jsimd_fdct_ifast (DCTELEM * data)
++{
++}
++
++GLOBAL(void)
++jsimd_fdct_float (FAST_FLOAT * data)
++{
++}
++
++
++GLOBAL(void)
++jsimd_quantize (JCOEFPTR coef_block, DCTELEM * divisors,
++                DCTELEM * workspace)
++{
++}
++
++GLOBAL(void)
++jsimd_quantize_float (JCOEFPTR coef_block, FAST_FLOAT * divisors,
++                      FAST_FLOAT * workspace)
++{
++}
++
++
++GLOBAL(void)
++jsimd_idct_2x2 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
++                JCOEFPTR coef_block, JSAMPARRAY output_buf,
++                JDIMENSION output_col)
++{
++  ISLOW_MULT_TYPE * quantptr;
++  JSAMPROW outptr;
++
++  /* Note: Must allocate 8x2 even though only 2x2 is used because
++   * IDCT function expects stride of 8. Stride input to function is ignored.
++   * There is also a hw limitation requiring input size to be 8x2.
++   */
++  INT16    idct_out[DCTSIZE * (DCTSIZE>>2)];  /* buffers data between passes */
++  INT16*   idctptr;
++  JCOEFPTR coefptr;
++  int ctr;
++
++  coefptr  = coef_block;
++  quantptr = (ISLOW_MULT_TYPE *) compptr->dct_table;
++
++  /* Dequantize the coeff buffer and write it back to the same location */
++  for (ctr = (DCTSIZE>>2); ctr > 0; ctr--) {
++    coefptr[0]         = DEQUANTIZE(coefptr[0]        , quantptr[0]        );
++    coefptr[DCTSIZE*1] = DEQUANTIZE(coefptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
++
++    /* advance pointers to next column */
++    quantptr++;
++    coefptr++;
++  }
++
++  idct_2x2_venum((INT16*)coef_block,
++                 (INT16*)idct_out,
++                  DCTSIZE * sizeof(INT16));
++
++  idctptr = idct_out;
++  for (ctr = 0; ctr < (DCTSIZE>>2); ctr++) {
++    outptr = output_buf[ctr] + output_col;
++
++    /* outptr sample size is 1 bytes, idctptr sample size is 2 bytes */
++    outptr[0] = idctptr[0];
++    outptr[1] = idctptr[1];
++
++    /* IDCT function assumes stride of 8 units */
++    idctptr += (DCTSIZE);    /* advance pointers to next row */
++  }
++}
++
++GLOBAL(void)
++jsimd_idct_4x4 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
++                JCOEFPTR coef_block, JSAMPARRAY output_buf,
++                JDIMENSION output_col)
++{
++  ISLOW_MULT_TYPE * quantptr;
++  JSAMPROW outptr;
++
++  /* Note: Must allocate 8x4 even though only 4x4 is used because
++   * IDCT function expects stride of 8. Stride input to function is ignored.
++   */
++  INT16    idct_out[DCTSIZE * (DCTSIZE>>1)];  /* buffers data between passes */
++  INT16*   idctptr;
++  JCOEFPTR coefptr;
++  int ctr;
++
++  coefptr  = coef_block;
++  quantptr = (ISLOW_MULT_TYPE *) compptr->dct_table;
++
++  /* Dequantize the coeff buffer and write it back to the same location */
++  for (ctr = (DCTSIZE>>1); ctr > 0; ctr--) {
++    coefptr[0]         = DEQUANTIZE(coefptr[0]        , quantptr[0]        );
++    coefptr[DCTSIZE*1] = DEQUANTIZE(coefptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
++    coefptr[DCTSIZE*2] = DEQUANTIZE(coefptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
++    coefptr[DCTSIZE*3] = DEQUANTIZE(coefptr[DCTSIZE*3], quantptr[DCTSIZE*3]);
++
++    /* advance pointers to next column */
++    quantptr++;
++    coefptr++;
++  }
++
++  idct_4x4_venum((INT16*)coef_block,
++                 (INT16*)idct_out,
++                  DCTSIZE * sizeof(INT16));
++
++  idctptr = idct_out;
++  for (ctr = 0; ctr < (DCTSIZE>>1); ctr++) {
++    outptr = output_buf[ctr] + output_col;
++
++    /* outptr sample size is 1 byte while idctptr sample size is 2 bytes */
++    outptr[0] = idctptr[0];
++    outptr[1] = idctptr[1];
++    outptr[2] = idctptr[2];
++    outptr[3] = idctptr[3];
++    /* IDCT function assumes stride of 8 units */
++    idctptr += (DCTSIZE);    /* advance pointers to next row */
++  }
++}
++
++
++GLOBAL(void)
++jsimd_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
++                JCOEFPTR coef_block, JSAMPARRAY output_buf,
++                JDIMENSION output_col)
++{
++  ISLOW_MULT_TYPE * quantptr;
++  JCOEFPTR coefptr;
++  int ctr;
++
++  /* idct_out temp buffer is needed because output_buf sample allocation is 8 bits,
++   * while IDCT output expects 16 bits.
++   */
++  INT16 idct_out[DCTSIZE2];  /* buffers data between passes */
++  JSAMPROW outptr;
++  INT16*  idctptr;
++
++  coefptr  = coef_block;
++  quantptr = (ISLOW_MULT_TYPE *) compptr->dct_table;
++
++  /* Dequantize the coeff buffer and write it back to the same location */
++  for (ctr = DCTSIZE; ctr > 0; ctr--) {
++    coefptr[0]         = DEQUANTIZE(coefptr[0]        , quantptr[0]        );
++    coefptr[DCTSIZE*1] = DEQUANTIZE(coefptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
++    coefptr[DCTSIZE*2] = DEQUANTIZE(coefptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
++    coefptr[DCTSIZE*3] = DEQUANTIZE(coefptr[DCTSIZE*3], quantptr[DCTSIZE*3]);
++    coefptr[DCTSIZE*4] = DEQUANTIZE(coefptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
++    coefptr[DCTSIZE*5] = DEQUANTIZE(coefptr[DCTSIZE*5], quantptr[DCTSIZE*5]);
++    coefptr[DCTSIZE*6] = DEQUANTIZE(coefptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
++    coefptr[DCTSIZE*7] = DEQUANTIZE(coefptr[DCTSIZE*7], quantptr[DCTSIZE*7]);
++
++    /* advance pointers to next column */
++    quantptr++;
++    coefptr++;
++  }
++
++  idct_8x8_venum((INT16*)coef_block,
++                 (INT16*)idct_out,
++                 DCTSIZE * sizeof(INT16));
++
++  idctptr = idct_out;
++  for (ctr = 0; ctr < DCTSIZE; ctr++) {
++    outptr = output_buf[ctr] + output_col;
++    // outptr sample size is 1 byte while idctptr sample size is 2 bytes
++    outptr[0] = idctptr[0];
++    outptr[1] = idctptr[1];
++    outptr[2] = idctptr[2];
++    outptr[3] = idctptr[3];
++    outptr[4] = idctptr[4];
++    outptr[5] = idctptr[5];
++    outptr[6] = idctptr[6];
++    outptr[7] = idctptr[7];
++    idctptr  += DCTSIZE;      /* advance pointers to next row */
++  }
++}
++
++GLOBAL(void)
++jsimd_idct_ifast (j_decompress_ptr cinfo, jpeg_component_info * compptr,
++                JCOEFPTR coef_block, JSAMPARRAY output_buf,
++                JDIMENSION output_col)
++{
++  ISLOW_MULT_TYPE * quantptr;
++  JCOEFPTR coefptr;
++  int ctr;
++
++  /* idct_out temp buffer is needed because output_buf sample allocation is 8 bits,
++   * while IDCT output expects 16 bits.
++   */
++  INT16 idct_out[DCTSIZE2];  /* buffers data between passes */
++  JSAMPROW outptr;
++  INT16*  idctptr;
++
++  coefptr  = coef_block;
++  quantptr = (ISLOW_MULT_TYPE *) compptr->dct_table;
++
++  /* Dequantize the coeff buffer and write it back to the same location */
++  for (ctr = DCTSIZE; ctr > 0; ctr--) {
++    coefptr[0]         = DEQUANTIZE(coefptr[0]        , quantptr[0]        );
++    coefptr[DCTSIZE*1] = DEQUANTIZE(coefptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
++    coefptr[DCTSIZE*2] = DEQUANTIZE(coefptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
++    coefptr[DCTSIZE*3] = DEQUANTIZE(coefptr[DCTSIZE*3], quantptr[DCTSIZE*3]);
++    coefptr[DCTSIZE*4] = DEQUANTIZE(coefptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
++    coefptr[DCTSIZE*5] = DEQUANTIZE(coefptr[DCTSIZE*5], quantptr[DCTSIZE*5]);
++    coefptr[DCTSIZE*6] = DEQUANTIZE(coefptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
++    coefptr[DCTSIZE*7] = DEQUANTIZE(coefptr[DCTSIZE*7], quantptr[DCTSIZE*7]);
++
++    /* advance pointers to next column */
++    quantptr++;
++    coefptr++;
++  }
++
++  idct_8x8_venum((INT16*)coef_block,
++                 (INT16*)idct_out,
++                 DCTSIZE * sizeof(INT16));
++
++  idctptr = idct_out;
++  for (ctr = 0; ctr < DCTSIZE; ctr++) {
++    outptr = output_buf[ctr] + output_col;
++    // outptr sample size is 1 byte while idctptr sample size is 2 bytes
++    outptr[0] = idctptr[0];
++    outptr[1] = idctptr[1];
++    outptr[2] = idctptr[2];
++    outptr[3] = idctptr[3];
++    outptr[4] = idctptr[4];
++    outptr[5] = idctptr[5];
++    outptr[6] = idctptr[6];
++    outptr[7] = idctptr[7];
++    idctptr  += DCTSIZE;      /* advance pointers to next row */
++  }
++}
++
++GLOBAL(void)
++jsimd_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
++                JCOEFPTR coef_block, JSAMPARRAY output_buf,
++                JDIMENSION output_col)
++{
++}
++
+--- /dev/null
++++ libjpeg-turbo-1.1.1/simd/jdidct-armv7.s
+@@ -0,0 +1,762 @@
++/*=========================================================================
++* jdidct-armv7.s
++*
++*  Copyright (c) 2010, Code Aurora Forum. All rights reserved.
++*
++*  Redistribution and use in source and binary forms, with or without
++*  modification, are permitted provided that the following conditions are
++*  met:
++*      * Redistributions of source code must retain the above copyright
++*        notice, this list of conditions and the following disclaimer.
++*      * Redistributions in binary form must reproduce the above
++*        copyright notice, this list of conditions and the following
++*        disclaimer in the documentation and/or other materials provided
++*        with the distribution.
++*      * Neither the name of Code Aurora Forum, Inc. nor the names of its
++*        contributors may be used to endorse or promote products derived
++*        from this software without specific prior written permission.
++*
++*  THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
++*  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
++*  ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
++*  BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++*  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++*  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
++*  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++*  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
++*  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
++*  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++*==========================================================================
++
++*==========================================================================
++*                         FUNCTION LIST
++*--------------------------------------------------------------------------
++* - idct_1x1_venum
++* - idct_2x2_venum
++* - idct_4x4_venum
++* - idct_8x8_venum
++*
++*==========================================================================
++*/
++
++@==========================================================================
++@ MACRO DEFINITION
++@==========================================================================
++    .macro Transpose8x8
++        @==================================================================
++        @ Transpose an 8 x 8 x 16 bit matrix in place
++        @ Input: q8 to q15
++        @ Output: q8 to q15
++        @ Registers used: q8 to q15
++        @ Assumptions: 8 x 8 x 16 bit data
++        @==================================================================
++
++        vswp d17, d24                  @q8, q12
++        vswp d23, d30                  @q11, q15
++        vswp d21, d28                  @q10, q14
++        vswp d19, d26                  @q9, q13
++
++        vtrn.32 q8,  q10
++        vtrn.32 q9,  q11
++        vtrn.32 q12, q14
++        vtrn.32 q13, q15
++
++        vtrn.16 q8,  q9
++        vtrn.16 q10, q11
++        vtrn.16 q12, q13
++        vtrn.16 q14, q15
++    .endm
++
++    .macro IDCT1D
++        @==================================================================
++        @ One dimensional 64 element inverse DCT
++        @ Input: q8 to q15 loaded with data
++        @        q0 loaded with constants
++        @ Output: q8 to q15
++        @ Registers used: q0, q4 to q15
++        @ Assumptions: 16 bit data, first elements in least significant
++        @ halfwords
++        @==================================================================
++
++        @1st stage
++        vqrdmulh.s16 q4,  q15, d0[2]   @q4 = a1*vx7
++        vqrdmulh.s16 q5,  q9,  d0[2]   @q5 = a1*vx1
++        vqrdmulh.s16 q6,  q13, d0[3]   @q6 = a2*vx5
++        vqrdmulh.s16 q7,  q11, d1[1]   @q7 = ma2*vx3
++        vqrdmulh.s16 q2,  q14, d0[1]   @q6 = a0*vx6
++        vqrdmulh.s16 q3,  q10, d0[1]   @q7 = a0*vx2
++        vqadd.s16   q9,  q4,  q9       @q9 = t1 = a1*vx7 + vx1
++        vqsub.s16   q5,  q5,  q15      @q5 = t8 = a1*vx1 - vx7
++        vqadd.s16   q15, q6,  q11      @q15 = t7 = a2*vx5 + vx3
++        vqadd.s16   q11, q7,  q13      @q11 = t3 = ma2*vx3 + vx5
++
++        @2nd stage
++        vqadd.s16   q13, q8,  q12      @q13 = t5 = vx0 + vx4
++        vqsub.s16   q8,  q8,  q12      @q8 = t0 = vx0 - vx4
++        vqadd.s16   q10, q2,  q10      @q10 = t2 = a0*vx6 + vx2
++        vqsub.s16   q12, q3,  q14      @q12 = t4 = a0*vx2 - vx6
++        vqadd.s16   q14, q5,  q11      @q14 = t6 = t8 + t3
++        vqsub.s16   q11, q5,  q11      @q11 = t3 = t8 - t3
++        vqsub.s16   q5,  q9,  q15      @q5 = t8 = t1 - t7
++        vqadd.s16   q9,  q9,  q15      @q9 = t1 = t1 + t7
++
++        @3rd stage
++        vqadd.s16   q15, q13, q10      @q15 = t7 = t5 + t2
++        vqsub.s16   q10, q13, q10      @q10 = t2 = t5 - t2
++        vqadd.s16   q13, q8,  q12      @q13 = t5 = t0 + t4
++        vqsub.s16   q7,  q8,  q12      @q7 = t0 = t0 - t4
++        vqsub.s16   q12, q5,  q11      @q12 = t4 = t8 - t3
++        vqadd.s16   q11, q5,  q11      @q11 = t3 = t8 + t3
++
++        @4th stage
++        vqadd.s16   q8,  q15, q9       @q8 = vy0 = t7 + t1
++        vqsub.s16   q15, q15, q9       @q15 = vy7 = t7 - t1
++        vqrdmulh.s16 q6,  q12, d0[0]   @q6 = c4*t4
++        vqrdmulh.s16 q4,  q11, d0[0]   @q4 = c4*t3
++        vqsub.s16   q12, q10, q14      @q12 = vy4 = t2 - t6
++        vqadd.s16   q11, q10, q14      @q11 = vy3 = t2 + t6
++        vqadd.s16   q10, q7,  q6       @q10 = vy2 = t0 + c4*t4
++        vqsub.s16   q14, q13, q4       @q14 = vy6 = t5 - c4*t3
++        vqadd.s16   q9,  q13, q4       @q9 = vy1 = t5 + c4*t3
++        vqsub.s16   q13, q7,  q6       @q13 = vy5 = t0 - c4*t4
++    .endm
++
++    .macro PART1
++        @==================================================================
++        @ Load input input data from memory and shift
++        @==================================================================
++        vld1.16   {d16, d17},[r0]!     @q8 =row0
++        vqshl.s16  q8,  q8,  #4        @Input data too big?!!
++                                       @Maximum MPEG input is 2047/-2048.
++        vld1.16   {d18, d19},[r0]!     @q9 =row1
++        vqshl.s16  q9,  q9,  #4        @Shift 1 instead of 4
++
++        vld1.16   {d20, d21},[r0]!     @q10=row2
++        vqshl.s16  q10, q10, #4
++
++        vld1.16   {d22, d23},[r0]!     @q11=row3
++        vqshl.s16  q11, q11, #4
++
++        vld1.16   {d24, d25},[r0]!     @q12=row4
++        vqshl.s16  q12, q12, #4
++
++        vld1.16   {d26, d27},[r0]!     @q13=row5
++        vqshl.s16  q13, q13, #4
++        vld1.16   {d28, d29},[r0]!     @q14=row6
++        vqshl.s16  q14, q14, #4
++        vld1.16   {d30, d31},[r0]!     @q15=row7
++        vqshl.s16  q15, q15, #4
++
++        @==================================================================
++        @ refresh the constants that was clobbered last time through IDCT1D
++        @==================================================================
++        vld1.16   {d4, d5},[r7]        @q2 =constants[2]
++        vld1.16   {d6, d7},[r8]        @q3 =constants[3]
++        vld1.16   {d8, d9},[r9]        @q4 =constants[4]
++    .endm
++
++    .macro PART2
++        @==================================================================
++        @ Prescale the input
++        @==================================================================
++        vqrdmulh.s16 q12, q12, q1      @q12=row4 * constants[1] = vx4
++        vqrdmulh.s16 q15, q15, q2      @q15=row7 * constants[2] = vx7
++        vqrdmulh.s16 q9,  q9,  q2      @q9 =row1 * constants[2] = vx1
++        vqrdmulh.s16 q13, q13, q4      @q13=row5 * constants[4] = vx5
++        vqrdmulh.s16 q11, q11, q4      @q11=row3 * constants[4] = vx3
++        vqrdmulh.s16 q14, q14, q3      @q14=row6 * constants[3] = vx6
++        vqrdmulh.s16 q10, q10, q3      @q10=row2 * constants[3] = vx2
++        vqrdmulh.s16 q8,  q8,  q1      @q8 =row0 * constants[1] = vx0
++
++        @==================================================================
++        @ At thsi point, the input 8x8 x 16 bit coefficients are
++        @ transposed, prescaled, and loaded in q8 to q15
++        @ q0 loaded with scalar constants
++        @ Perform 1D IDCT
++        @==================================================================
++        IDCT1D                         @perform 1d idct
++
++        @==================================================================
++        @ Transpose the intermediate results to get read for vertical
++        @ transformation
++        @==================================================================
++        vswp d17, d24                  @q8, q12
++        vswp d23, d30                  @q11, q15
++        vswp d21, d28                  @q10, q14
++        vswp d19, d26                  @q9, q13
++
++        @==================================================================
++        @ Load the bias
++        @==================================================================
++        vdup.32 q4, d1[1]              @a cycle is saved by loading
++                                       @the bias at this point
++
++        @==================================================================
++        @ Finish the transposition
++        @==================================================================
++        vtrn.32 q8,  q10
++        vtrn.32 q9,  q11
++        vtrn.32 q12, q14
++        vtrn.32 q13, q15
++        vtrn.16 q8,  q9
++        vtrn.16 q10, q11
++        vtrn.16 q12, q13
++        vtrn.16 q14, q15
++
++        @==================================================================
++        @ Add bias
++        @==================================================================
++        vqadd.s16 q8, q8, q4
++
++        @==================================================================
++        @ IDCT 2nd half
++        @==================================================================
++        IDCT1D                         @perform 1d dct
++
++        @==================================================================
++        @ Scale and clamp the output to correct range and save to memory
++        @ 1. scale to 8bits by right shift 6
++        @ 2. clamp output to [0, 255] by min/max
++        @ 3. use multiple store. Each store will save one row of output.
++        @    The st queue size is 4, so do no more than 4 str in sequence.
++        @==================================================================
++        ldr       r5, =constants+5*16  @constants[5],
++        vld1.16   d10, [r5]            @load clamping parameters
++        vdup.s16  q6,  d10[0]          @q6=[0000000000000000]
++        vdup.s16  q7,  d10[1]          @q7=[FFFFFFFFFFFFFFFF]
++
++        @Save the results
++        vshr.s16  q8,  q8,  #6         @q8 = vy0
++        vmax.s16  q8,  q8,  q6         @clamp >0
++        vmin.s16  q8,  q8,  q7         @clamp <255
++
++        vshr.s16  q9,  q9,  #6         @q9 = vy1
++        vmax.s16  q9,  q9,  q6         @clamp >0
++        vmin.s16  q9,  q9,  q7         @clamp <255
++
++        vshr.s16  q10, q10, #6         @q10 = vy2
++        vmax.s16  q10, q10, q6         @clamp >0
++        vmin.s16  q10, q10, q7         @clamp <255
++
++        vshr.s16  q11, q11, #6         @q11 = vy3
++        vmax.s16  q11, q11, q6         @clamp >0
++        vmin.s16  q11, q11, q7         @clamp <255
++
++        vst1.16  {d16, d17},[r1],r2    @q8 =row0
++        vst1.16  {d18, d19},[r1],r2    @q9 =row1
++        vst1.16  {d20, d21},[r1],r2    @q10=row2
++        vst1.16  {d22, d23},[r1],r2    @q11=row3
++
++        vshr.s16  q12, q12, #6         @q12 = vy4
++        vmax.s16  q12, q12, q6         @clamp >0
++        vmin.s16  q12, q12, q7         @clamp <255
++
++        vshr.s16  q13, q13, #6         @q13 = vy5
++        vmax.s16  q13, q13, q6         @clamp >0
++        vmin.s16  q13, q13, q7         @clamp <255
++
++        vshr.s16  q14, q14, #6         @q14 = vy6
++        vmax.s16  q14, q14, q6         @clamp >0
++        vmin.s16  q14, q14, q7         @clamp <255
++
++        vshr.s16  q15, q15, #6         @q15 = vy7
++        vmax.s16  q15, q15, q6         @clamp >0
++        vmin.s16  q15, q15, q7         @clamp <255
++
++        vst1.16  {d24, d25},[r1],r2    @q12=row4
++        vst1.16  {d26, d27},[r1],r2    @q13=row5
++        vst1.16  {d28, d29},[r1],r2    @q14=row6
++        vst1.16  {d30, d31},[r1]       @q15=row7
++    .endm
++
++    .macro BIG_BODY_TRANSPOSE_INPUT
++        @==================================================================
++        @ Main body of idct
++        @==================================================================
++        PART1
++        Transpose8x8
++        PART2
++    .endm
++
++    .macro IDCT_ENTRY
++        @==================================================================
++        @ Load the locations of the constants
++        @==================================================================
++        ldr  r5,  =constants+0*16      @constants[0]
++        ldr  r6,  =constants+1*16      @constants[1]
++        ldr  r7,  =constants+2*16      @constants[2]
++        ldr  r8,  =constants+3*16      @constants[3]
++        ldr  r9,  =constants+4*16      @constants[4]
++
++        @==================================================================
++        @ Load the coefficients
++        @ only some input coefficients are load due to register constrain
++        @==================================================================
++        vld1.16   {d0, d1},[r5]        @q0 =constants[0] (scalars)
++        vld1.16   {d2, d3},[r6]        @q1 =constants[1]
++    .endm
++@==========================================================================
++@ END of MACRO DEFINITION
++@==========================================================================
++
++
++    .section idct_func, "x"            @ ARE
++    .text                              @ idct_func, CODE, READONLY
++    .align 2
++    .code 32                           @ CODE32
++
++@==========================================================================
++@ Main Routine
++@==========================================================================
++
++    .global idct_1x1_venum
++    .global idct_2x2_venum
++    .global idct_4x4_venum
++    .global idct_8x8_venum
++
++@==========================================================================
++@ FUNCTION     : idct_1x1_venum
++@--------------------------------------------------------------------------
++@ DISCRIPTION  : ARM optimization of one 1x1 block iDCT
++@--------------------------------------------------------------------------
++@ C PROTOTYPE  : void idct_1x1_venum(int16 * input,
++@                                    int16 * output,
++@                                    int32 stride)
++@--------------------------------------------------------------------------
++@ REG INPUT    : R0 pointer to input (int16)
++@                R1 pointer to output (int16)
++@                R2 block stride
++@--------------------------------------------------------------------------
++@ STACK ARG    : None
++@--------------------------------------------------------------------------
++@ MEM INPUT    : None
++@--------------------------------------------------------------------------
++@ REG OUTPUT   : None
++@--------------------------------------------------------------------------
++@ MEM OUTPUT   : None
++@--------------------------------------------------------------------------
++@ REG AFFECTED : R0 - R2
++@--------------------------------------------------------------------------
++@ STACK USAGE  : none
++@--------------------------------------------------------------------------
++@ CYCLES       : 17 cycles
++@--------------------------------------------------------------------------
++@ NOTES        :
++@ This idct_1x1_venum code was developed with ARM instruction set.
++@
++@ ARM REGISTER ALLOCATION
++@ =========================================================================
++@ r0  : pointer to input data
++@ r1  : pointer to output area
++@ r2  : stride in the output buffer
++@==========================================================================
++.type idct_1x1_venum, %function
++idct_1x1_venum:
++
++    ldrsh   r3, [r0]                   @ Load signed half word (int16)
++    ldr     r2, =1028                  @ 1028 = 4 + 128 << 3
++                                       @ 4 for rounding, 128 for offset
++    add     r2, r3, r2
++    asrs    r2, r2, #3                 @ Divide by 8, and set status bit
++    movmi   r2, #0                     @ Clamp to be greater than 0
++    cmp     r2, #255
++    movgt   r2, #255                   @ Clamp to be less than 255
++    str     r2, [r1]                   @ Save output
++    bx      lr                         @ Return to caller
++
++                                       @ end of idct_1x1_venum
++
++
++@==========================================================================
++@ FUNCTION     : idct_2x2_venum
++@--------------------------------------------------------------------------
++@ DISCRIPTION  : VeNum optimization of one 2x2 block iDCT
++@--------------------------------------------------------------------------
++@ C PROTOTYPE  : void idct_2x2_venum(int16 * input,
++@                                    int16 * output,
++@                                    int32 stride)
++@--------------------------------------------------------------------------
++@ REG INPUT    : R0 pointer to input (int16)
++@                R1 pointer to output (int16)
++@                R2 block stride
++@--------------------------------------------------------------------------
++@ STACK ARG    : None
++@--------------------------------------------------------------------------
++@ MEM INPUT    : None
++@--------------------------------------------------------------------------
++@ REG OUTPUT   : None
++@--------------------------------------------------------------------------
++@ MEM OUTPUT   : None
++@--------------------------------------------------------------------------
++@ REG AFFECTED : R0 - R2
++@--------------------------------------------------------------------------
++@ STACK USAGE  : none
++@--------------------------------------------------------------------------
++@ CYCLES       : 27 cycles
++@--------------------------------------------------------------------------
++@ NOTES        : Output buffer must be an 8x8 16-bit buffer
++@
++@ ARM REGISTER ALLOCATION
++@ ==========================================
++@ r0  : pointer to input data
++@ r1  : pointer to output area
++@ r2  : stride in the output buffer
++@ -------------------------------------------
++@
++@ VENUM REGISTER ALLOCATION
++@ =================================================
++@ q0     : output x0 - x4
++@ q1     : not used
++@ q2     : not used
++@ q3     : not used
++@ q4     : not used
++@ q5     : not used
++@ q6     : not used
++@ q7     : not used
++@ q8     : input y0 - y4
++@ q9     : intermediate value
++@ q10    : intermediate value
++@ q11    : offset value
++@ q12    : clamp value
++@ q13    : not used
++@ q14    : not used
++@ q15    : not used
++@==========================================================================
++.type idct_2x2_venum, %function
++idct_2x2_venum:
++
++    vld4.32    {d16, d17, d18, d19}, [r0]
++                                       @  d16: y0 | y1 | y2 | y3  (LSB | MSB)
++
++    vtrn.32    d16, d17                @  d16: y0 | y1 | X | X
++                                       @  d17: y2 | y3 | X | X
++
++    vqadd.s16  d18, d16, d17           @ d18: y0+y2 | y1+y3 | X | X   q: saturated
++    vqsub.s16  d19, d16, d17           @ d19: y0-y2 | y1-y3 | X | X   q: saturated
++
++    vtrn.16    d18, d19                @ d18: y0+y2 | y0-y2 | X | X
++                                       @ d19: y1+y3 | y1-y3 | X | X
++
++    vqadd.s16  d20, d18, d19           @ d20: (y0+y2)+(y1+y3) | (y0-y2)+(y1-y3)
++                                       @       x0 | x2 | X | X
++    vqsub.s16  d21, d18, d19           @ d21: (y0+y2)-(y1+y3) | (y0-y2)-(y1-y3)
++                                       @       x1 | x3 | X | X
++
++    vtrn.16    d20, d21                @ d20:  x0 | x1 | X | X
++                                       @ d21:  x2 | x3 | X | X
++
++    vrshr.s16  q10, q10, #3               @ Divide by 8
++
++    vmov.i16   q11, #128               @ q11 = 128|128|128|128|128|128|128|128
++    vqadd.s16  q0, q10, q11            @ Add offset to make output in [0,255]
++
++    vmov.i16   q12, #0                   @ q12 = [0000000000000000]
++    vmov.i16   q13, #255               @ q13 = [FFFFFFFFFFFFFFFF] (hex)
++
++    vmax.s16   q0, q0, q12             @ Clamp > 0
++    vmin.s16   q0, q0, q13             @ Clamp < 255
++
++    vstr       d0, [r1]                @ Store  x0 | x1 | X | X
++                                       @ Potential out of boundary issue
++    add        r1, r1, r2              @ Add the offset to the output pointer
++    vstr       d1, [r1]                @ Store  x2 | x3 | X | X
++                                       @ Potential out of boundary issue
++    bx         lr                      @ Return to caller
++
++                                       @ end of idct_2x2_venum
++
++
++@==========================================================================
++@ FUNCTION     : idct_4x4_venum
++@--------------------------------------------------------------------------
++@ DISCRIPTION  : VeNum optimization of one 4x4 block iDCT
++@--------------------------------------------------------------------------
++@ C PROTOTYPE  : void idct_4x4_venum(int16 * input,
++@                                    int16 * output,
++@                                    int32 stride)
++@--------------------------------------------------------------------------
++@ REG INPUT    : R0 pointer to input (int16)
++@                R1 pointer to output (int16)
++@                R2 block stride
++@--------------------------------------------------------------------------
++@ STACK ARG    : None
++@--------------------------------------------------------------------------
++@ MEM INPUT    : None
++@--------------------------------------------------------------------------
++@ REG OUTPUT   : None
++@--------------------------------------------------------------------------
++@ MEM OUTPUT   : None
++@--------------------------------------------------------------------------
++@ REG AFFECTED : R0 - R3, R12
++@--------------------------------------------------------------------------
++@ STACK USAGE  : none
++@--------------------------------------------------------------------------
++@ CYCLES       : 56 cycles
++@--------------------------------------------------------------------------
++@ NOTES        :
++@
++@ ARM REGISTER ALLOCATION
++@ ==========================================
++@ r0  : pointer to input data
++@ r1  : pointer to output area
++@ r2  : stride in the output buffer
++@ r3  : pointer to the coefficient set
++@ r12 : pointer to the coefficient set
++@ -------------------------------------------
++@
++@ VENUM REGISTER ALLOCATION
++@ =================================================
++@ q0     : coefficients[0]
++@ q1     : coefficients[1]
++@ q2     : coefficients[2]
++@ q3     : coefficients[3]
++@ q4     : not used
++@ q5     : not used
++@ q6     : not used
++@ q7     : not used
++@ q8     : input y0 - y7
++@ q9     : input y8 - y15
++@ q10    : intermediate value
++@ q11    : intermediate value
++@ q12    : intermediate value
++@ q13    : intermediate value
++@ q14    : intermediate value
++@ q15    : intermediate value
++@==========================================================================
++.type idct_4x4_venum, %function
++idct_4x4_venum:
++
++        @ Load the locations of the first 2 sets of coefficients
++        ldr  r3,   =coefficient+0*16   @ coefficient[0]
++        ldr  r12,  =coefficient+1*16   @ coefficient[1]
++
++        @ Load the first 2 sets of coefficients
++        vld1.16  {d0, d1},[r3]         @ q0 = C4 | C2 | C4 | C6 | C4 | C2 | C4 | C6
++        vld1.16  {d2, d3},[r12]        @ q1 = C4 | C6 | C4 | C2 | C4 | C6 | C4 | C2
++
++        @ Load the locations of the second 2 sets of coefficients
++        ldr  r3,   =coefficient+2*16   @ coefficient[2]
++        ldr  r12,  =coefficient+3*16   @ coefficient[3]
++
++        @ Load the second 2 sets of coefficients
++        vld1.16  {d4, d5},[r3]         @ q2 = C4 | C4 | C4 | C4 | C2 | C2 | C2 | C2
++        vld1.16  {d6, d7},[r12]        @ q3 = C4 | C4 | C4 | C4 | C6 | C6 | C6 | C6
++
++        @ Load the input values
++        vld1.16  {d16}, [r0], r2       @ d16:   y0  | y1  | y2  | y3  (LSB | MSB)
++        vld1.16  {d17}, [r0], r2       @ d17:   y4  | y5  | y6  | y7  (LSB | MSB)
++        vld1.16  {d18}, [r0], r2       @ d18:   y8  | y9  | y10 | y11 (LSB | MSB)
++        vld1.16  {d19}, [r0], r2       @ d19:   y12 | y13 | y14 | y15 (LSB | MSB)
++
++        @ Apply iDCT Horizonally
++
++        @ q8: y0 |y1 |y2 |y3 |y4 |y5 |y6 |y7
++        @ q9: y8 |y9 |y10|y11|y12|y13|y14|y15
++
++        @======================================================================
++        @ vqrdmulh doubles the result and save the high 16 bits of the result,
++        @ this is equivalent to right shift by 15 bits.
++        @ since coefficients are in Q15 format, it contradicts with the right
++        @ shift 15 here, so the final result is in Q0 format
++        @
++        @ vqrdmulh will also round the result
++        @======================================================================
++
++        vqrdmulh.s16  q10, q8, q0      @ q10: C4*y0  | C2*y1  | C4*y2  | C6*y3  | C4*y4  | C2*y5  | C4*y6  | C6*y7
++        vqrdmulh.s16  q11, q8, q1      @ q11: C4*y0  | C6*y1  | C4*y2  | C2*y3  | C4*y4  | C6*y5  | C4*y6  | C2*y7
++
++        vqrdmulh.s16  q12, q9, q0      @ q12: C4*y8  | C2*y9  | C4*y10 | C6*y11 | C4*y12 | C2*y13 | C4*y14 | C6*y15
++        vqrdmulh.s16  q13, q9, q1      @ q13: C4*y8  | C6*y9  | C4*y10 | C2*y11 | C4*y12 | C6*y13 | C4*y14 | C2*y15
++
++        vtrn.32       q10, q12         @ q10: C4*y0  | C2*y1  | C4*y8  | C2*y9  | C4*y4  | C2*y5  | C4*y12 | C2*y13
++                                       @ q12: C4*y2  | C6*y3  | C4*y10 | C6*y11 | C4*y6  | C6*y7  | C4*y14 | C6*y15
++
++        vtrn.32       q11, q13         @ q11: C4*y0  | C6*y1  | C4*y8  | C6*y9  | C4*y4  | C6*y5  | C4*y12 | C6*y13
++                                       @ q13: C4*y2  | C2*y3  | C4*y10 | C2*y11 | C4*y6  | C2*y7  | C4*y14 | C2*y15
++
++        vqadd.s16     q14, q10, q12    @ q14: C4*y0 + C4*y2 | C2*y1 + C6*y3 | C4*y8 + C4*y10 | C2*y9 + C6*y11 | C4*y4 + C4*y6 | C2*y5 + C6*y7 | C4*y12 + C4*y14 | C2*y13 + C6*y15
++                                       @       S0 | S2 | S8 | S10 | S4 | S6 | S12 | S14
++
++        vqsub.s16     q15, q11, q13    @ q15: C4*y0 - C4*y2 | C6*y1 - C2*y3 | C4*y8 - C4*y10 | C6*y9 - C2*y11 | C4*y4 - C4*y6 | C6*y5 - C2*y7 | C4*y12 - C4*y14 | C6*y13 - C2*y15
++                                       @       S1 | S3 | S9 | S11 | S5 | S7 | S13 | S15
++
++        vtrn.16       q14, q15         @ q14: S0 | S1 | S8  | S9  | S4 | S5 | S12 | S13
++                                       @ q15: S2 | S3 | S10 | S11 | S6 | S7 | S14 | S15
++
++        vqadd.s16     q8, q14, q15     @ q8:  Z0 | Z1 | Z8  | Z9  | Z4 | Z5 | Z12 | Z13
++        vqsub.s16     q9, q14, q15     @ q9:  Z3 | Z2 | Z11 | Z10 | Z7 | Z6 | Z15 | Z14
++        vrev32.16     q9, q9           @ q9:  Z2 | Z3 | Z10 | Z11 | Z6 | Z7 | Z14 | Z15
++
++
++        @ Apply iDCT Vertically
++
++        vtrn.32       q8, q9           @ q8:  Z0 | Z1 | Z2  | Z3  | Z4  | Z5  | Z6  | Z7
++                                       @ q9:  Z8 | Z9 | Z10 | Z11 | Z12 | Z13 | Z14 | Z15
++
++
++        vqrdmulh.s16  q10, q8, q2      @ q10: C4*Z0 | C4*Z1 | C4*Z2 | C4*Z3 | C2*Z4 | C2*Z5 | C2*Z6 | C2*Z7
++        vqrdmulh.s16  q11, q8, q3      @ q11: C4*Z0 | C4*Z1 | C4*Z2 | C4*Z3 | C6*Z4 | C6*Z5 | C6*Z6 | C6*Z7
++
++        vqrdmulh.s16  q12, q9, q2      @ q12: C4*Z8 | C4*Z9 | C4*Z10 | C4*Z11 | C2*Z12 | C2*Z13 | C2*Z14 | C2*Z15
++        vqrdmulh.s16  q13, q9, q3      @ q13: C4*Z8 | C4*Z9 | C4*Z10 | C4*Z11 | C6*Z12 | C6*Z13 | C6*Z14 | C6*Z15
++
++        vqadd.s16     q14, q10, q13    @ q14: C4*Z0+C4*Z8 | C4*Z1+C4*Z9 | C4*Z2+C4*Z10 | C4*Z3+C4*Z11 | C2*Z4+C6*Z12 | C2*Z5+C6*Z13 | C2*Z6+C6*Z14 | C2*Z7+C6*Z15
++                                       @      s0 | s4 | s8 | s12 | s2 | s6 | s10 | s14
++
++        vqsub.s16     q15, q11, q12    @ q15: C4*Z0-C4*Z8 | C4*Z1-C4*Z9 | C4*Z2-C4*Z10 | C4*Z3-C4*Z11 | C6*Z4-C2*Z12 | C6*Z5-C2*Z13 | C6*Z6-C2*Z14 | C6*Z7-C2*Z15
++                                       @      s1 | s5 | s9 | s13 | s3 | s7 | s11 | s15
++
++        vswp          d29, d30         @ q14: s0 | s4 | s8  | s12 | s1 | s5 | s9  | s13
++                                       @ q15: s2 | s6 | s10 | s14 | s3 | s7 | s11 | s15
++
++        vqadd.s16     q8, q14, q15     @ q8:  x0 | x4 | x8  | x12 | x1 | x5 | x9 | x13
++        vqsub.s16     q9, q14, q15     @ q9:  x3 | x7 | x11 | x15 | x2 | x6 | x10 | x14
++
++        vmov.i16      q10, #0           @ q10=[0000000000000000]
++        vmov.i16      q11, #255        @ q11=[FFFFFFFFFFFFFFFF] (hex)
++
++        vmov.i16      q0, #128         @ q0 = 128|128|128|128|128|128|128|128
++
++        vqadd.s16     q8, q8, q0       @ Add the offset
++        vqadd.s16     q9, q9, q0       @ Add the offset
++
++        vmax.s16      q8, q8, q10      @ clamp > 0
++        vmin.s16      q8, q8, q11      @ clamp < 255
++
++        vmax.s16      q9, q9, q10      @ clamp > 0
++        vmin.s16      q9, q9, q11      @ clamp < 255
++
++        vst1.16       {d16}, [r1], r2  @  d16:   x0 | x1  | x2  | x3  (LSB | MSB)
++        vst1.16       {d17}, [r1], r2  @  d17:   x4 | x5  | x6  | x7  (LSB | MSB)
++        vst1.16       {d19}, [r1], r2  @  d18:   x8 | x9  | x10 | x11 (LSB | MSB)
++        vst1.16       {d18}, [r1], r2  @  d19:   x12| x13 | x14 | x15 (LSB | MSB)
++
++        bx         lr                  @ Return to caller
++
++                                       @ end of idct_4x4_venum
++
++@==========================================================================
++@ FUNCTION     : idct_8x8_venum
++@--------------------------------------------------------------------------
++@ DISCRIPTION  : VeNum optimization of one 8x8 block iDCT
++@--------------------------------------------------------------------------
++@ C PROTOTYPE  : void idct_8x8_venum(int16 * input,
++@                                    int16 * output,
++@                                    int32 stride)
++@--------------------------------------------------------------------------
++@ REG INPUT    : R0 pointer to input (int16)
++@                R1 pointer to output (int16)
++@                R2 block stride
++@--------------------------------------------------------------------------
++@ STACK ARG    : None
++@--------------------------------------------------------------------------
++@ MEM INPUT    : None
++@--------------------------------------------------------------------------
++@ REG OUTPUT   : None
++@--------------------------------------------------------------------------
++@ MEM OUTPUT   : None
++@--------------------------------------------------------------------------
++@ REG AFFECTED : R0 - R9
++@--------------------------------------------------------------------------
++@ STACK USAGE  : none
++@--------------------------------------------------------------------------
++@ CYCLES       : 177 cycles
++@--------------------------------------------------------------------------
++@ NOTES        :
++@
++@ It was tested to be IEEE 1180 compliant. Since IEEE 1180 compliance is more stringent
++@ than MPEG-4 compliance, this version is also MPEG-4 compliant.
++@
++@ CODE STRUCTURE:
++@ (i)   Macros for transposing an 8x8 matrix and for configuring the VFP unit are defined.
++@ (ii)  Macro for IDCT in one dimension is defined as four stages
++@ (iii) The two dimensional code begins
++@ (iv)  constants are defined in the area DataArea
++@
++@ PROGRAM FLOW:
++@
++@ The VFP is configured
++@ The parameters to IDCT are loaded
++@ the coefficients are loaded
++@ loop:
++@    decrement loop counter
++@    The first input Matrix is loaded and pre-scaled
++@    The input is prescaled using the constants
++@    IDCT is performed in one dimension on the 8 columns
++@    The matrix is transposed
++@    A bias is loaded an added to the matrix
++@    IDCT is performed in one dimension on the 8 rows
++@    The matrix is post-scaled
++@    The matrix is saved
++@    test loop counter and loop if greater than zero
++@ stop
++@
++@
++@ ARM REGISTER ALLOCATION
++@ ==========================================
++@ r0 : pointer to input data
++@ r1 : pointer to output are
++@ r2 : stride in the output buffer
++@ r3 :
++@ r4 :
++@ r5 : pointer to constants[0] [5]
++@ r6 : pointer to constants[1]
++@ r7 : pointer to constants[2]
++@ r8 : pointer to constants[3]
++@ r9 : pointer to constants[4]
++@ -------------------------------------------
++@
++@ VENUM REGISTER ALLOCATION
++@ =================================================
++@ q0     : constants[0]
++@ q1     : constants[1]
++@ q2     : constants[2], IDCT1D in-place scratch
++@ q3     : constants[3], IDCT1D in-place scratch
++@ q4     : constants[4], IDCT1D in-place scratch, and bias compensation
++@ q5     :               IDCT1D in-place scratch
++@ q6     :               IDCT1D in-place scratch
++@ q7     :               IDCT1D in-place scratch
++@ q8     : Matrix[0]     IDCT1D in-place scratch
++@ q9     : Matrix[1]     IDCT1D in-place scratch
++@ q10    : Matrix[2]     IDCT1D in-place scratch
++@ q11    : Matrix[3]     IDCT1D in-place scratch
++@ q12    : Matrix[4]     IDCT1D in-place scratch
++@ q13    : Matrix[5]     IDCT1D in-place scratch
++@ q14    : Matrix[6]     IDCT1D in-place scratch
++@ q15    : Matrix[7]     IDCT1D in-place scratch
++@==========================================================================
++.type idct_8x8_venum, %function
++idct_8x8_venum:
++
++        push {r5-r9}
++        vpush {d8-d15}
++        IDCT_ENTRY
++        BIG_BODY_TRANSPOSE_INPUT
++        vpop {d8-d15}
++        pop  {r5-r9}
++        bx   lr
++                                       @ end of idct_8x8_venum
++
++@==========================================================================
++@ Constants Definition AREA: define idct kernel, bias
++@==========================================================================
++    .section ro_data_area              @ AREA  RODataArea
++    .data                              @ DATA, READONLY
++    .align 5                           @ ALIGN=5
++
++constants:
++        .hword  23170, 13573, 6518,  21895, -23170, -21895, 8223,  8224
++        .hword  16384, 22725, 21407, 19266, 16384,  19266,  21407, 22725
++        .hword  22725, 31521, 29692, 26722, 22725,  26722,  29692, 31521
++        .hword  21407, 29692, 27969, 25172, 21407,  25172,  27969, 29692
++        .hword  19266, 26722, 25172, 22654, 19266,  22654,  25172, 26722
++        .hword      0,   255,     0,     0
++
++coefficient:                           @ These are the coefficent used by 4x4 iDCT in Q15 format
++        .hword 11585, 15137,  11585,  6270, 11585, 15137,  11585,  6270  @ C4, C2, C4, C6, C4, C2, C4, C6 /2
++        .hword 11585,  6270,  11585, 15137, 11585,  6270,  11585, 15137  @ C4, C6, C4, C2, C4, C6, C4, C2 /2
++        .hword 11585, 11585,  11585, 11585, 15137, 15137,  15137, 15137  @ C4, C4, C4, C4, C2, C2, C2, C2 /2
++        .hword 11585, 11585,  11585, 11585,  6270,  6270,   6270,  6270  @ C4, C4, C4, C4, C6, C6, C6, C6 /2
++
++.end
