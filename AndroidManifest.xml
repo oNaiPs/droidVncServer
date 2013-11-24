@@ -4,56 +4,8 @@
     android:versionCode="58"
     android:versionName="1.1RC1" >
 
-    <uses-sdk android:minSdkVersion="4" />
-
     <uses-permission android:name="android.permission.WRITE_SETTINGS" >
     </uses-permission>
-   
-    <application
-        android:name="MainApplication"
-        android:debuggable="false" 
-        android:icon="@drawable/icon" 
-        android:label="droid VNC server" >
-        <activity
-            android:name=".MainActivity"
-            android:icon="@drawable/icon"
-            android:label="@string/app_name"
-            android:launchMode="singleInstance">
-            <intent-filter> 
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-  
-                <action android:name="org.onaips.vnc.ACTIVITY_UPDATE" />
-            </intent-filter>
-        </activity>   
-        <activity 
-            android:name="preferences"
-            android:label="Preferences" >
-        </activity>
-        <activity
-            android:name="com.google.ads.AdActivity"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize" />
-
-        <service android:name=".ServerManager" >
-            <intent-filter>
-                <action android:name="org.onaips.vnc.ServerManager" >
-                </action>
-            </intent-filter>
-        </service>
-
-        <receiver android:name=".StartServiceAtBootReceiver" >
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-
-                <category android:name="android.intent.category.HOME" />
-            </intent-filter>
-        </receiver>
-
-        <service android:name="avncservice" >
-        </service>
-    </application>
-
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" >
     </uses-permission>
     <uses-permission android:name="android.permission.ACCESS_SUPERUSER" >
@@ -70,5 +22,38 @@
     </uses-permission>
     <uses-permission android:name="android.permission.WAKE_LOCK" >
     </uses-permission>
+
+    <application
+        android:name="MainApplication"
+        android:icon="@drawable/icon" 
+        android:label="droid VNC server" >
+        <activity
+            android:name=".MainActivity"
+            android:icon="@drawable/icon"
+            android:label="@string/app_name"
+            android:launchMode="singleInstance"
+            android:screenOrientation="landscape">
+            <intent-filter> 
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+  
+                <action android:name="org.onaips.vnc.ACTIVITY_UPDATE" />
+            </intent-filter>
+        </activity>
+
+        <activity 
+            android:name="preferences"
+            android:label="Preferences" >
+        </activity>
+
+        <service android:name=".ServerManager" >
+            <intent-filter>
+                <action android:name="org.onaips.vnc.ServerManager" >
+                </action>
+            </intent-filter>
+        </service>
+
+    </application>
 
 </manifest>
