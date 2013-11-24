@@ -2,4 +2,5 @@ bin/
 gen/
 obj/
 out/
+libs/
 .DS_Store
