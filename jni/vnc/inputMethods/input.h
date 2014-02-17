@@ -33,6 +33,15 @@ int keysym2scancode(rfbBool down, rfbKeySym c, rfbClientPtr cl, int *sh, int *al
 void transformTouchCoordinates(int *x, int *y,int,int);
 void ptrEvent(int buttonMask, int x, int y, rfbClientPtr cl);
 void keyEvent(rfbBool down, rfbKeySym key, rfbClientPtr cl);
+{
+....
+if (key && down)
+{
+....
+}
+// Added this to "flush" out key events as they come in achieving real-time
+// character input on Android
+suinput_write(inputfd, EV_SYN, SYN_REPORT, 0);
 void cleanupInput();
 
 #endif
