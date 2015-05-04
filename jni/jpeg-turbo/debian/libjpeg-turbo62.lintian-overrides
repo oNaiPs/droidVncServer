@@ -1,2 +1,0 @@
-# yes, we specifically want linkers to depends on the standard libjpeg name
-libturbojpeg62: shlibs-declares-dependency-on-other-package libjpeg62 (>=6b1)
