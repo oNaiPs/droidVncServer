@@ -76,4 +76,7 @@ LOCAL_STATIC_LIBRARIES := libjpeg libpng libssl_static libcrypto_static
 
 LOCAL_MODULE := androidvncserver
 
+LOCAL_CFLAGS += -fPIE
+LOCAL_LDFLAGS += -fPIE -pie
+
 include $(BUILD_EXECUTABLE)
