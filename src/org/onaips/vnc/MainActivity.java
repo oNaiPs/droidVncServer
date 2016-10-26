@@ -58,10 +58,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.ads.AdRequest;
-import com.google.ads.AdSize;
-import com.google.ads.AdView;
-
 public class MainActivity extends Activity 
 {      
 	private static final int MENU_QUIT = 0;
@@ -72,8 +68,7 @@ public class MainActivity extends Activity
 
 	static final int APP_ID = 123;
 	static final String VNC_LOG ="VNCserver";
-	
-	private AdView adView = null;
+
 	private ServerManager s = null;
 	private Animation buttonAnimation=null;
 	private SharedPreferences preferences;
@@ -126,8 +121,6 @@ public class MainActivity extends Activity
 	@Override  
 	protected void onDestroy()
 	{
-		if (adView != null)
-			adView.destroy();
 		super.onDestroy();
 		unregisterReceiver(mReceiver);
 	}
@@ -184,15 +177,6 @@ public class MainActivity extends Activity
 
 		// register wifi event receiver
 		registerReceiver(mReceiver,  new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-
-		boolean hidead=preferences.getBoolean("hidead", false);
-		if (!hidead)
-		{
-
-			// Look up the AdView as a resource and load a request.
-			adView = (AdView)this.findViewById(R.id.adView);
-			adView.loadAd(new AdRequest());
-		} 
 
 		findViewById(R.id.Button01).setOnClickListener(new OnClickListener() {
 			public void onClick(View arg0) {

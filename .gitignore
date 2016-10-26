@@ -1,4 +1,6 @@
-bin
-gen
-libs
-obj
+bin/
+gen/
+obj/
+out/
+libs/
+.DS_Store

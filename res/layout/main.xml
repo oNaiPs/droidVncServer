@@ -1,37 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:ads="http://schemas.android.com/apk/lib/com.google.ads"
-    android:layout_width="fill_parent"
+    android:layout_width="match_parent"
     android:layout_height="fill_parent"
     android:background="@drawable/bg"
-    android:gravity="top"
-    android:orientation="vertical" 
-    android:id="@+id/mainLayout">
+    android:gravity="bottom"
+    android:orientation="vertical" >
 
     <LinearLayout
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:gravity="center_horizontal"
-        android:orientation="vertical" >
+        android:id="@+id/layout1"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:orientation="horizontal" >
 
-        <ImageView
+        <LinearLayout
+            android:id="@+id/linearLayout1"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:scaleType="fitStart"
-            android:src="@drawable/droidvnclogo" />
+            android:layout_height="match_parent"
+            android:gravity="center_horizontal|center_vertical"
+            android:orientation="vertical" >
+
+            <ImageView
+                android:layout_width="260dp"
+                android:layout_height="wrap_content"
+                android:src="@drawable/droidvnclogo" >
+            </ImageView>
+
+            <TextView
+                android:id="@+id/stateLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:paddingTop="10dp"
+                android:text="@+id/TextView01"
+                android:textSize="30sp"
+                android:typeface="sans" >
+            </TextView>
+
+            <TextView
+                android:id="@+id/TextView01"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:gravity="center"
+                android:paddingTop="10dp"
+                android:shadowColor="#111"
+                android:shadowDy="1.0"
+                android:shadowRadius="0.5"
+                android:text="@+id/TextView02"
+                android:textSize="15sp"
+                android:typeface="sans" >
+            </TextView>
+        </LinearLayout>
 
         <RelativeLayout
             android:id="@+id/relativeLayout1"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="10dp" >
+            android:layout_width="wrap_content"
+            android:layout_height="177dp"
+                        android:gravity="center_horizontal|center_vertical"
+            
+            android:layout_gravity="center" >
 
             <Button
                 android:id="@+id/Button01"
-                android:layout_width="200dp"
-                android:layout_height="200dp"
-                android:layout_centerHorizontal="true"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:layout_centerInParent="true"
                 android:background="@drawable/btnstart" >
             </Button>
 
@@ -44,40 +79,6 @@
                 android:background="@drawable/restart_normal" >
             </Button>
         </RelativeLayout>
-
-        <TextView
-            android:id="@+id/stateLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingTop="10dp"
-            android:shadowColor="#111"
-            android:shadowDy="1.0"
-            android:shadowRadius="0.5"
-            android:text="@+id/TextView01"
-            android:textSize="30sp" >
-        </TextView>
-
-        <TextView
-            android:id="@+id/TextView01"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:paddingTop="10dp"
-            android:shadowColor="#111"
-            android:shadowDy="1.0"
-            android:shadowRadius="0.5"
-            android:text="@+id/TextView02"
-            android:textSize="15sp" >
-        </TextView>
     </LinearLayout>
- 
-  <com.google.ads.AdView
-      android:id="@+id/adView"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:layout_alignParentBottom="true"
-      ads:adSize="BANNER"
-      ads:adUnitId="a14c45a1d8a1817"
-      android:gravity="center_horizontal" />
 
 </RelativeLayout>
