@@ -1,64 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-<string name="app_name">droid VNC server</string>
-<string-array name="rotation_values">
-<item>0</item>
-<item>90</item>
-<item>180</item>
-<item>270</item>
-</string-array>
-<string-array name="rotation_strings">
-<item>0</item>
-<item>90</item>
-<item>180</item>
-<item>270</item>
-</string-array>
-<string-array name="scale_values">
-<item>150</item>
-<item>100</item> 
-<item>50</item>
-<item>30</item>
-<item>20</item>
-</string-array>
-<string-array name="scale_strings">
-<item>150</item>
-<item>100</item>
-<item>50</item>
-<item>30</item>
-<item>20</item>
-</string-array>
-<string-array name="display_mode_strings">
-<item>Auto-detect</item>
-<item>Framebuffer</item>
-<item>Gralloc (Tegra2)</item>
-<!-- <item>ADB</item>  -->
-<item>SurfaceFlinger (2.3+)</item>
-</string-array>
-<string-array name="display_mode_values">
-<item>auto</item> 
-<item>fb</item>  
-<item>gralloc</item>
-<!-- <item>adb</item> -->
-<item>gingerbread</item>
-</string-array>
-<string-array name="sleep_strings">
-<item>On</item>
-<item>Off</item>
-</string-array>
-<string-array name="startonboot_strings">
-<item>True</item>
-<item>False</item>
-</string-array>
-<string-array name="startonboot_values">
-<item>On</item>
-<item>Off</item>
-</string-array>
-<string name="device_info_fmt">
-droid VNC version: <xliff:g id="application_version">%s</xliff:g>\n
-Device model: <xliff:g id="device_model">%s</xliff:g>\n
-Firmware version: <xliff:g id="firmware_revision">%s</xliff:g>\n
-Kernel version: <xliff:g id="kernel_version">%s</xliff:g>\n
-Build number: <xliff:g id="build_number">%s</xliff:g>\n
-CPU ABI: <xliff:g id="cpu_abi">%s</xliff:g>\n
-</string>       
+
+    <!-- Nombre de la app -->
+    <string name="app_name">Droid VNC Server</string>
+
+    <!-- Textos de interfaz -->
+    <string name="start_vnc">Start VNC Server</string>
+    <string name="stop_vnc">Stop VNC Server</string>
+    <string name="status_running">VNC Server iniciado en puerto 5901 (pass 1234)</string>
+    <string name="status_stopped">VNC Server detenido</string>
+
+    <!-- Info del dispositivo (si quieres mantenerlo en "About") -->
+    <string name="device_info_fmt">
+        Droid VNC version: <xliff:g id="application_version">%s</xliff:g>\n
+        Device model: <xliff:g id="device_model">%s</xliff:g>\n
+        Firmware version: <xliff:g id="firmware_revision">%s</xliff:g>\n
+        Kernel version: <xliff:g id="kernel_version">%s</xliff:g>\n
+        Build number: <xliff:g id="build_number">%s</xliff:g>\n
+        CPU ABI: <xliff:g id="cpu_abi">%s</xliff:g>\n
+    </string>
 </resources>
+

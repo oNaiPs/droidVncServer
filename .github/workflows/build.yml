@@ -1,0 +1,33 @@
+name: Build APK (Ant)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 8
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '8'
+
+    - name: Install Ant
+      run: sudo apt-get install -y ant
+
+    - name: Build APK
+      run: ant debug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: DroidVNC-APK
+        path: bin/*.apk
