@@ -1,0 +1,69 @@
+name: Build Android VNC Server
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r21e
+        add-to-path: true
+
+    - name: Verify NDK installation
+      run: |
+        echo "NDK_HOME=$ANDROID_NDK_HOME"
+        ls -la "$ANDROID_NDK_HOME"
+        which ndk-build || echo "$ANDROID_NDK_HOME/ndk-build"
+
+    - name: Build native code
+      run: |
+        if [ -x "$ANDROID_NDK_HOME/ndk-build" ]; then
+          "$ANDROID_NDK_HOME/ndk-build"
+        elif [ -x "$(which ndk-build)" ]; then
+          ndk-build
+        else
+          echo "ERROR: ndk-build not found"
+          exit 1
+        fi
+
+    - name: Update executables and libraries
+      run: |
+        chmod +x ./updateExecsAndLibs.sh
+        ./updateExecsAndLibs.sh
+
+    - name: List build artifacts
+      run: |
+        echo "=== Build artifacts in libs/ ==="
+        find libs -type f -name "*.so" -o -name "androidvncserver" -o -name "libandroidvncserver.so"
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-vnc-server-libs
+        path: |
+          libs/**/*.so
+          libs/**/androidvncserver
+          libs/**/libandroidvncserver.so
+        if-no-files-found: warn
+
+    - name: Build status
+      if: success()
+      run: echo "✅ Build completed successfully!"
